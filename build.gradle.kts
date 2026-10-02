@@ -72,7 +72,28 @@ teavm {
     }
     js {
         obfuscated.set(providers.gradleProperty("dev").map { false }.orElse(true))
+        // Java-style bounds/null/cast checks: mistakes surface as errors instead of silent NaN/undefined
+        strict.set(true)
         outputDir.set(file("site/teavm"))
         targetFileName.set("bcu.js")
     }
+}
+
+// JVM test harness (platform/src/jvm): the same battle code on a normal Java VM, to compare with the
+// browser build. Needs tools/dev_server.py running. Example: ./gradlew runJvmBattle --args="000003 9 0 60"
+val jvm by sourceSets.creating {
+    java.srcDir("platform/src/jvm/java")
+    compileClasspath += sourceSets.main.get().output + sourceSets.main.get().compileClasspath
+    runtimeClasspath += output + compileClasspath
+}
+tasks.named<JavaCompile>("compileJvmJava") {
+    options.encoding = "UTF-8"
+    options.compilerArgs.add("-nowarn")
+}
+tasks.register<JavaExec>("runJvmBattle") {
+    group = "verification"
+    description = "Runs a battle with BCU's core on the JVM (for comparison with the browser build)"
+    classpath = jvm.runtimeClasspath
+    mainClass.set("bcuweb.jvm.JvmBattle")
+    workingDir = projectDir
 }

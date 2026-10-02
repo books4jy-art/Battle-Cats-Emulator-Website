@@ -7,3 +7,4 @@ site/data/index.json
 __pycache__/
 .idea/
 .DS_Store
+tools/.cache/

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Battle Cats Emulator</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header>
+  <div class="brand">
+    <svg viewBox="0 0 40 40" aria-hidden="true">
+      <rect x="1" y="1" width="38" height="38" rx="10" fill="rgba(255,255,255,.03)" stroke="rgba(255,255,255,.1)"/>
+      <path d="M11 16 L11 9 L17 13.5 M29 16 L29 9 L23 13.5" stroke="#7dd3fc" stroke-width="1.8" fill="none" stroke-linejoin="round" stroke-linecap="round"/>
+      <ellipse cx="20" cy="22" rx="10.5" ry="9" stroke="#7dd3fc" stroke-width="1.8" fill="none"/>
+      <circle cx="16" cy="21" r="1.2" fill="#7dd3fc"/><circle cx="24" cy="21" r="1.2" fill="#7dd3fc"/>
+      <path d="M18.5 25 q1.5 1.2 3 0" stroke="#7dd3fc" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+    </svg>
+    <span class="eyebrow" data-t="brand">Battle Cats Emulator</span>
+  </div>
+  <nav class="seg2" role="group" aria-label="Language">
+    <button type="button" data-lang="en" aria-pressed="true">EN</button>
+    <button type="button" data-lang="kr" aria-pressed="false">한국어</button>
+  </nav>
+</header>
+
+<main>
+  <section>
+    <h1 data-t="title">Battle Cats Ultimate, <span class="accent">in your browser</span></h1>
+    <p class="lede" data-t="lede">BCU's battle engine compiled to JavaScript. Game data is downloaded from BCU's own servers the first time and kept in your browser.</p>
+
+    <div class="card stack">
+      <div>
+        <p class="section-title" data-t="dataTitle">1 · Game data</p>
+        <button class="btn btn-primary" id="load" type="button"><span data-t="load">Load game data</span></button>
+        <div class="progress" id="progress" hidden><div class="bar" id="bar"></div></div>
+        <p class="hint" id="loadStatus"></p>
+      </div>
+
+      <div id="battleBox" hidden>
+        <p class="section-title" data-t="battleTitle">2 · Battle simulation</p>
+        <div class="row3">
+          <label class="field"><span class="label" data-t="colc">Collection</span><select class="input" id="colc"></select></label>
+          <label class="field"><span class="label" data-t="map">Map</span><select class="input" id="map"></select></label>
+          <label class="field"><span class="label" data-t="stage">Stage</span><select class="input" id="stage"></select></label>
+        </div>
+        <p class="hint" data-t="autoHint">The first five basic cats are deployed automatically whenever they can be.</p>
+        <div class="row-btns">
+          <button class="btn btn-primary" id="run" type="button" data-t="run">Run battle</button>
+          <div class="seg3" role="group" aria-label="Speed">
+            <button type="button" data-speed="1" aria-pressed="true">1×</button>
+            <button type="button" data-speed="4" aria-pressed="false">4×</button>
+            <button type="button" data-speed="0" aria-pressed="false" data-t="instant">Instant</button>
+          </div>
+        </div>
+        <canvas id="field" width="960" height="220"></canvas>
+        <div class="stat-grid">
+          <div class="stat"><label data-t="time">Time</label><b id="sTime">–</b></div>
+          <div class="stat"><label data-t="money">Money</label><b id="sMoney">–</b></div>
+          <div class="stat"><label data-t="enemyBase">Enemy base</label><b id="sEbase">–</b></div>
+          <div class="stat"><label data-t="catBase">Cat base</label><b id="sUbase">–</b></div>
+        </div>
+        <p class="result" id="result"></p>
+      </div>
+
+      <div class="alert-error" id="error" hidden></div>
+    </div>
+    <p class="hint foot" data-t="foot">Private test build. Battle Cats © PONOS. Battle Cats Ultimate by the BCU team.</p>
+  </section>
+</main>
+
+<script src="js/i18n.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
