@@ -1,0 +1,9 @@
+# build output (CI rebuilds these)
+build/
+.gradle/
+site/teavm/
+site/data/index.json
+*.class
+__pycache__/
+.idea/
+.DS_Store

@@ -1,0 +1,36 @@
+# Builds the static site (TeaVM output + asset index) and keeps it as a downloadable artifact.
+# Nothing is deployed from here.
+name: Build site
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: true
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Compile BCU core + browser platform to JavaScript (TeaVM)
+        run: ./gradlew generateJavaScript --console=plain
+      - name: Build the asset index (reads only BCU pack headers)
+        run: |
+          pip install cryptography
+          python tools/build_index.py --out site/data/index.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: site/
+          retention-days: 14
