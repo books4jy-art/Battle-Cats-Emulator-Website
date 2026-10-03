@@ -26,6 +26,13 @@ public final class BattleSession {
 
     private static SBCtrl battle;
 
+    /** Crown (star) difficulty for the next battle: 0 = first crown (EoC: chapter 1), as the stage map's stars. */
+    private static int star;
+
+    public static void setStar(int s) {
+        star = Math.max(0, s);
+    }
+
     /** Sound effects (BCU music numbers) the battle asked for since the last step; each played once per step. */
     private static final java.util.LinkedHashSet<Integer> sounds = new java.util.LinkedHashSet<>();
     private static boolean autoMode;
@@ -82,7 +89,12 @@ public final class BattleSession {
             firstColc = false;
             boolean firstMap = true;
             for (StageMap sm : mc.maps) {
-                sb.append(firstMap ? "" : ",").append("{\"name\":").append(q(sm.toString())).append(",\"stages\":[");
+                StringBuilder stars = new StringBuilder();
+                for (int i = 0; i < sm.stars.length; i++) {
+                    stars.append(i == 0 ? "" : ",").append(sm.stars[i]);
+                }
+                sb.append(firstMap ? "" : ",").append("{\"name\":").append(q(sm.toString()))
+                        .append(",\"stars\":[").append(stars).append("],\"stages\":[");
                 firstMap = false;
                 boolean firstSt = true;
                 for (Stage st : sm.list) {
@@ -155,7 +167,8 @@ public final class BattleSession {
         CommonStatic.getConfig().twoRow = false;
         CommonStatic.getConfig().ref = false;
         autoMode = auto;
-        battle = new SBCtrl(auto ? AUTO : NONE, st, 0, lu.copy(), new int[1], seed); // ints[0]: bit 1 = max worker, bit 2 = sniper
+        int crown = Math.min(star, Math.max(0, st.getCont().stars.length - 1));
+        battle = new SBCtrl(auto ? AUTO : NONE, st, crown, lu.copy(), new int[1], seed); // ints[0]: bit 1 = max worker, bit 2 = sniper
         sounds.clear();
         // music: mus0 from the start, mus1 once the enemy base's health drops below mush percent (as BCU's apps)
         return "{\"stage\":" + q(st.toString()) + ",\"len\":" + st.len

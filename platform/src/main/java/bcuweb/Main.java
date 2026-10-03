@@ -55,6 +55,10 @@ public class Main {
         Js.export("bcuBattleFiles", (BattleStartFn) (colc, map, stage, seed, lineup, auto) -> BattleSession.battleFiles(colc, map, stage, lineup));
         Js.export("bcuInput", (StrFn) Main::input);
         Js.export("bcuInfo", (StrFn) Main::info);
+        Js.export("bcuSetStar", (StepFn) s -> {
+            BattleSession.setStar(s);
+            return "";
+        });
         Js.export("bcuBattleStep", (StepFn) BattleSession::step);
         Js.export("bcuAttachCanvas", (ObjFn) c -> {
             BattleView.attach(c);
@@ -98,7 +102,7 @@ public class Main {
             case "enemy":
                 return Info.enemy(Integer.parseInt(p[1]), Integer.parseInt(p[2]), Integer.parseInt(p[3]));
             case "stage":
-                return Info.stage(p[1], Integer.parseInt(p[2]), Integer.parseInt(p[3]));
+                return Info.stage(p[1], Integer.parseInt(p[2]), Integer.parseInt(p[3]), p.length > 4 ? Integer.parseInt(p[4]) : 0);
             case "enemies":
                 return Info.enemies();
             default:

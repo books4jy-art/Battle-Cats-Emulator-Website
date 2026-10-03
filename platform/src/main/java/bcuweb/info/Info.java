@@ -119,7 +119,7 @@ public final class Info {
 
     // ---------------------------------------------------------------- stages
     /** A stage: its settings and the enemy list (as BCU's StageTable shows it). */
-    public static String stage(String colc, int map, int stage) {
+    public static String stage(String colc, int map, int stage, int crown) {
         Stage st = null;
         for (MapColc mc : MapColc.values()) {
             if (mc.getSID().equals(colc) && map < mc.maps.size() && stage < mc.maps.get(map).list.size()) {
@@ -135,12 +135,12 @@ public final class Info {
                 .num("minSpawn", st.minSpawn).num("maxSpawn", st.maxSpawn);
         // enemy strength: a row's % times the stage map's star (crown) multiplier; 0 means "the star multiplier"
         int[] stars = st.getCont().stars;
-        int star = stars.length > 0 ? stars[0] : 100;
+        int star = stars.length > 0 ? stars[Math.max(0, Math.min(crown, stars.length - 1))] : 100;
         StringBuilder sj = new StringBuilder("[");
         for (int i = 0; i < stars.length; i++) {
             sj.append(i == 0 ? "" : ",").append(stars[i]);
         }
-        j.raw("stars", sj.append(']').toString());
+        j.raw("stars", sj.append(']').toString()).num("star", star);
         StringBuilder rows = new StringBuilder("[");
         SCDef.Line[] lines = st.data.getSimple();
         for (int i = 0; i < lines.length; i++) {

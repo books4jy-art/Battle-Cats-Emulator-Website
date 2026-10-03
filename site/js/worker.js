@@ -528,6 +528,8 @@ self.onmessage = async (ev) => {
       if (self.bcuInput) { bcuInput(args.cmd); draw(); }
     } else if (cmd === "units") {
       post("units", JSON.parse(bcuUnits("")));
+    } else if (cmd === "setStar") {
+      if (self.bcuSetStar) bcuSetStar(args.star | 0);
     } else if (cmd === "info") {
       post("info", { req: args.req, data: JSON.parse(bcuInfo(args.req)) });
     } else if (cmd === "icons") {

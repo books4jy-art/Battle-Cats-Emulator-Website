@@ -198,7 +198,7 @@ const Info = (() => {
   // ---------------------------------------------------------------- stage
   function stageReq() {
     if (!stages.length) return null;
-    return `stage ${stages[$("colc").value].id} ${$("map").value} ${$("stage").value}`;
+    return `stage ${stages[$("colc").value].id} ${$("map").value} ${$("stage").value} ${$("star").value || 0}`;
   }
 
   function renderStage() {
@@ -210,7 +210,7 @@ const Info = (() => {
     const card = $("stageCard");
     card.innerHTML = "";
     if (d.error) { card.append(el("p", "hint", d.error)); return; }
-    const star = d.stars[0] || 100;
+    const star = d.star || 100;
     card.append(el("h3", null, d.name), el("p", "hint", d.map));
     card.append(statGrid([
       ["stLen", num(d.len)], ["stHealth", num(d.health)], ["stMax", d.max],

@@ -332,15 +332,32 @@ function fillSelect(sel, items) {
   }
 }
 
+// BCU keeps the main story's maps in a fixed internal order (zombie EoC first, ...); list them as the game
+// does: EoC, ItF 1-3, CotC 1-3, Filibuster, Aku Realms, then the zombie outbreaks. Values stay BCU's indexes.
+const MAIN_ORDER = [9, 3, 4, 5, 6, 7, 8, 11, 14, 0, 1, 2, 10, 12, 13, 15, 16, 17, 18];
+
+function mapOrder(c) {
+  const all = c.maps.map((m, i) => i);
+  if (c.id !== "000003") return all;
+  return [...MAIN_ORDER.filter((i) => i < all.length), ...all.filter((i) => !MAIN_ORDER.includes(i))];
+}
+
 function onColc() {
   const c = stages[$("colc").value];
-  fillSelect($("map"), c.maps.map((m, i) => [i, `${i + 1}. ${m.name}`]));
+  fillSelect($("map"), mapOrder(c).map((i, pos) => [i, `${pos + 1}. ${c.maps[i].name}`]));
   onMap();
 }
 
 function onMap() {
-  const m = stages[$("colc").value].maps[$("map").value];
+  const c = stages[$("colc").value], mi = +$("map").value, m = c.maps[mi];
   fillSelect($("stage"), m.stages.map((s, i) => [i, `${i + 1}. ${s}`]));
+  // difficulty: the map's crowns (BCU "stars"); EoC's three chapters are its three crowns
+  const keep = $("star").value;
+  const stars = m.stars || [100];
+  const eoc = c.id === "000003" && mi === 9;
+  fillSelect($("star"), stars.map((pct, i) => [i, eoc ? `${t("chapter", i + 1)} (${pct}%)` : `${"★".repeat(i + 1)} (${pct}%)`]));
+  if (keep && +keep < stars.length) $("star").value = keep;
+  $("starField").hidden = stars.length < 2;
 }
 
 // ---------------------------------------------------------------- lineup
@@ -549,6 +566,7 @@ $("load").onclick = () => {
 $("colc").onchange = () => { onColc(); Info.stageChanged(); };
 $("map").onchange = () => { onMap(); Info.stageChanged(); };
 $("stage").onchange = () => Info.stageChanged();
+$("star").onchange = () => Info.stageChanged();
 $("stageInfo").onclick = () => Info.showStage();
 $("run").onclick = () => {
   if (!lineup.some(Boolean)) return showError(t("emptyLineup"));
@@ -564,6 +582,7 @@ $("run").onclick = () => {
     const { lv, plus } = levelOf(s);
     return `${s.id}:${s.form}:${lv}:${plus}`;
   });
+  worker.postMessage({ cmd: "setStar", args: { star: +$("star").value || 0 } });
   worker.postMessage({ cmd: "battleStart", args: {
     colc: stages[$("colc").value].id, map: +$("map").value, stage: +$("stage").value,
     seed: SEED ?? ((Math.random() * 2 ** 31) | 0), lineup: slots.join(","), auto: $("auto").checked,
