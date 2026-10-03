@@ -309,7 +309,8 @@ document.addEventListener("fullscreenchange", () => { if (!document.fullscreenEl
 function onStages(data) {
   const keep = stages.length ? [$("colc").value, $("map").value, $("stage").value] : null;
   // main story (collection 000003) first, the rest in BCU's order
-  stages = [...data.filter((c) => c.id === "000003"), ...data.filter((c) => c.id !== "000003")];
+  const byId = (a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+  stages = [...data.filter((c) => c.id === "000003"), ...data.filter((c) => c.id !== "000003").sort(byId)];
   fillSelect($("colc"), stages.map((c, i) => [i, c.name || c.id]));
   if (keep) { // language switch: same choices, new names
     $("colc").value = keep[0]; onColc(); $("map").value = keep[1]; onMap(); $("stage").value = keep[2];
@@ -348,9 +349,19 @@ function onColc() {
   onMap();
 }
 
+// EoC (main story map 9) holds all three chapters: stages 0-46 are shared, then each chapter's Moon
+// (47, 49, 50); 48 (Challenge Battle) and 51+ (collaboration stages) aren't part of a chapter.
+const EOC_MOON = [47, 49, 50];
+
+function stageOrder(c, mi, star) {
+  const all = c.maps[mi].stages.map((s, i) => i);
+  if (c.id !== "000003" || mi !== 9 || all.length < 51) return { main: all, extra: [] };
+  const moon = EOC_MOON[Math.min(star, 2)];
+  return { main: [...all.slice(0, 47), moon], extra: all.filter((i) => i > 46 && !EOC_MOON.includes(i)) };
+}
+
 function onMap() {
   const c = stages[$("colc").value], mi = +$("map").value, m = c.maps[mi];
-  fillSelect($("stage"), m.stages.map((s, i) => [i, `${i + 1}. ${s}`]));
   // difficulty: the map's crowns (BCU "stars"); EoC's three chapters are its three crowns
   const keep = $("star").value;
   const stars = m.stars || [100];
@@ -358,6 +369,18 @@ function onMap() {
   fillSelect($("star"), stars.map((pct, i) => [i, eoc ? `${t("chapter", i + 1)} (${pct}%)` : `${"★".repeat(i + 1)} (${pct}%)`]));
   if (keep && +keep < stars.length) $("star").value = keep;
   $("starField").hidden = stars.length < 2;
+  fillStages();
+}
+
+/** The stage list (the chosen EoC chapter's stages, then the map's stages outside the chapters). */
+function fillStages(keepStage) {
+  const c = stages[$("colc").value], mi = +$("map").value, m = c.maps[mi];
+  const keep = keepStage ? $("stage").value : "";
+  const { main, extra } = stageOrder(c, mi, +$("star").value || 0);
+  fillSelect($("stage"), [...main.map((i, pos) => [i, `${pos + 1}. ${m.stages[i]}`]), ...extra.map((i) => [i, `+ ${m.stages[i]}`])]);
+  if (keep === "") return;
+  if ([...main, ...extra].includes(+keep)) $("stage").value = keep;
+  else if (EOC_MOON.includes(+keep)) $("stage").value = String(main[main.length - 1]); // the other chapter's Moon: this one's
 }
 
 // ---------------------------------------------------------------- lineup
@@ -566,7 +589,7 @@ $("load").onclick = () => {
 $("colc").onchange = () => { onColc(); Info.stageChanged(); };
 $("map").onchange = () => { onMap(); Info.stageChanged(); };
 $("stage").onchange = () => Info.stageChanged();
-$("star").onchange = () => Info.stageChanged();
+$("star").onchange = () => { fillStages(true); Info.stageChanged(); };
 $("stageInfo").onclick = () => Info.showStage();
 $("run").onclick = () => {
   if (!lineup.some(Boolean)) return showError(t("emptyLineup"));
