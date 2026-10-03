@@ -3,7 +3,8 @@
 BCU's game data lives in encrypted .asset.bcuzip packs in github.com/battlecatsultimate/bcu-assets.
 This script reads only the packs' headers and file tables (a few KB each, using HTTP range requests)
 and writes an index. The browser then downloads just the files it needs, straight from BCU's repo,
-and decrypts them itself. No game data is copied into this repository.
+and decrypts them itself. The only game files in this repository are the Korean game's versions of a
+few files (site/data/kr, see tools/kr_overlay.py), listed in the index under "local".
 
 Pack layout (from bcu-core/io/PackLoader.java, readPack / FileLoader):
   pack : HEAD(16) | key(16) | len(4, little-endian) | encrypted ZipDesc JSON (len rounded up to 16) | files...
@@ -121,6 +122,15 @@ def music_list() -> list:
             start += 64
 
 
+def local_files() -> dict:
+    """The Korean game's versions of files that differ from BCU's (made by tools/kr_overlay.py)."""
+    listing = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "site", "data", "kr", "files.json")
+    if not os.path.exists(listing):
+        return {}
+    with open(listing) as fh:
+        return json.load(fh)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="site/data/index.json")
@@ -156,6 +166,7 @@ def main() -> None:
         "files": files,  # path -> [zip index, offset from base, size]
         "music_url": MUSIC_URL,
         "music": music_list(),  # [id, size]
+        "local": local_files(),  # path -> size: the site's own files (site/data/kr), used instead of BCU's
     }
     os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
     with open(args.out, "w") as fh:

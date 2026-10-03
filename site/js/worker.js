@@ -44,7 +44,8 @@ self.bcuPost = (type, text) => {
   if (type === "ready" && javaReady) javaReady();
   else post(type, text);
 };
-self.bcuFileList = () => Object.entries(index.files).map(([p, f]) => p + "\t" + f[2]).join("\n");
+self.bcuFileList = () => [...Object.entries(index.files).map(([p, f]) => p + "\t" + f[2]),
+  ...Object.entries(index.local || {}).filter(([p]) => !index.files[p]).map(([p, n]) => p + "\t" + n)].join("\n");
 self.bcuReadExtra = (name) => {
   const b = extra.get(name);
   return b ? new Int8Array(b.buffer, b.byteOffset, b.length) : null;
@@ -152,8 +153,39 @@ function decryptFile(path, buf, bufStart) {
   files.set(path, plain.subarray(0, size));
 }
 
+// ---- the site's own game files (site/data/kr, listed in index.local as path -> size): the Korean game's
+// versions of files that differ from BCU's (Japanese) ones. Plain files, served with the site; they
+// replace BCU's file of the same path.
+const localLoaded = new Set();
+const allPaths = () => [...Object.keys(index.files), ...Object.keys(index.local || {}).filter((p) => !index.files[p])];
+const isLocal = (path) => !!(index.local && index.local[path] !== undefined);
+const localUrl = (path) => "../data/kr/" + path.replace(/^\.\/org\//, "");
+
+async function fetchLocal(path) {
+  const res = await fetch(localUrl(path));
+  if (!res.ok) throw new Error(`couldn't download ${path} (HTTP ${res.status})`);
+  files.set(path, new Uint8Array(await res.arrayBuffer()));
+  localLoaded.add(path);
+}
+
+function fetchLocalNow(path) {
+  const xhr = new XMLHttpRequest();
+  xhr.open("GET", localUrl(path), false);
+  xhr.responseType = "arraybuffer";
+  try {
+    xhr.send();
+  } catch (e) {
+    throw new Error(navigator.onLine ? `couldn't download ${path}` : "offline");
+  }
+  if (xhr.status !== 200) throw new Error(`couldn't download ${path} (HTTP ${xhr.status})`);
+  files.set(path, new Uint8Array(xhr.response));
+  localLoaded.add(path);
+  return files.get(path);
+}
+
 /** The game needs a file right now (synchronous; only possible in a worker): from saved data, else the network. */
 function fetchNow(path) {
+  if (isLocal(path)) return fetchLocalNow(path);
   if (!index.files[path]) return null;
   const [zip, start, end] = fileRange(path);
   const r = findSaved(zip, start, end);
@@ -231,8 +263,9 @@ async function pool(list, n, fn) {
 /** Loads files into memory: from saved data where possible, the rest downloaded in bulk (and saved). */
 async function prefetch(paths, label, quiet) {
   const fromSaved = new Map(); // saved range -> [{path, start, end}]
-  const missing = [];
+  const missing = [], local = [];
   for (const path of paths) {
+    if (isLocal(path)) { if (!localLoaded.has(path)) local.push(path); continue; } // (even if a saved copy is loaded)
     if (files.has(path) || !index.files[path]) continue;
     const [zip, start, end] = fileRange(path);
     const r = findSaved(zip, start, end);
@@ -268,6 +301,7 @@ async function prefetch(paths, label, quiet) {
     await saveRange(r.zip, r.start, r.end, buf);
     progress(r.end - r.start);
   });
+  await pool(local, PARALLEL, fetchLocal);
 }
 
 // ---- music files (bcu-assets/music/NNN.ogg, listed in index.music as [id, size])
@@ -470,7 +504,7 @@ self.onmessage = async (ev) => {
       index = await (await fetch("../data/index.json")).json();
       if (LOCAL) index.asset_url = self.location.origin + "/bcu-assets/{id}.asset.bcuzip";
       const tSaved = performance.now();
-      const startup = Object.keys(index.files).filter((p) => STARTUP.test(p));
+      const startup = allPaths().filter((p) => STARTUP.test(p));
       const timed = (name, pr) => pr.then((v) => { stats[name + "Ms"] = Math.round(performance.now() - tSaved); return v; });
       const [, , snap] = await Promise.all([timed("extras", loadExtras()), timed("ranges", loadSaved()),
         timed("snap", self.caches ? loadSnapshot() : Promise.resolve(false)), loadMusicSaved()]);
@@ -511,7 +545,7 @@ self.onmessage = async (ev) => {
     } else if (cmd === "battleStart") {
       // download the battle's animations in bulk first (much faster than one file at a time once it runs)
       const dirs = bcuBattleFiles(args.colc, args.map, args.stage, 0, args.lineup, false).split("\n").filter(Boolean);
-      await prefetch(Object.keys(index.files).filter((p) => dirs.some((d) => p.startsWith(d))), "battle", true);
+      await prefetch(allPaths().filter((p) => dirs.some((d) => p.startsWith(d))), "battle", true);
       const res = JSON.parse(bcuBattleStart(args.colc, args.map, args.stage, args.seed, args.lineup, !!args.auto));
       if (res.error) return post("battle", res);
       // let the first pictures (background, castles, lineup, enemies) decode before the battle runs
