@@ -13,6 +13,9 @@ const IV = Uint8Array.from("5af764bb8e1a80e202fe24a3d56add1d".match(/../g), (h) 
 // Small files BCU's apps bundle themselves (ability and animation text), from BCU_Android at a fixed commit.
 const EXTRA_URL = "https://raw.githubusercontent.com/battlecatsultimate/BCU_Android/86400116299340f24aea5e80fc38951a8bb08d93/app/src/main/res/raw/";
 const EXTRA_FILES = ["proc.json", "proc_kr.json", "proc_jp.json", "proc_es.json", "proc_zh.json", "animation_type.json"];
+// Stage, cat and enemy names (English, Korean, and Japanese as the fallback BCU uses), from bcu-assets/lang.
+const NAMES_URL = "https://raw.githubusercontent.com/battlecatsultimate/bcu-assets/master/lang/";
+const NAME_FILES = ["en", "kr", "jp"].flatMap((l) => ["StageName", "UnitName", "EnemyName"].map((f) => `${l}-${f}.txt`));
 const CACHE = "bcu-assets-v1";
 // ?assets=local: get game data through tools/dev_server.py instead of GitHub (testing, slow networks)
 const LOCAL = new URL(self.location.href).searchParams.get("assets") === "local";
@@ -152,10 +155,14 @@ async function prefetch(paths, label) {
 }
 
 async function loadExtras() {
-  await Promise.all(EXTRA_FILES.map(async (name) => {
-    const res = await fetch((LOCAL ? "/bcu-extra/" : EXTRA_URL) + name);
-    if (res.ok) extra.set("lang/" + name, new Uint8Array(await res.arrayBuffer()));
-  }));
+  const get = async (url, key) => {
+    const res = await fetch(url);
+    if (res.ok) extra.set(key, new Uint8Array(await res.arrayBuffer()));
+  };
+  await Promise.all([
+    ...EXTRA_FILES.map((name) => get((LOCAL ? "/bcu-extra/" : EXTRA_URL) + name, "lang/" + name)),
+    ...NAME_FILES.map((name) => get((LOCAL ? "/bcu-lang/" : NAMES_URL) + name, "names/" + name)),
+  ]);
 }
 
 // ---------------------------------------------------------------- messages from the page
@@ -174,6 +181,8 @@ self.onmessage = async (ev) => {
       await new Promise((ok) => { javaReady = ok; main([]); }); // wires the core and defines bcuLoad & co.
       const info = JSON.parse(bcuLoad(args.lang));
       post("loaded", { ...info, stats, onDemand: onDemandLog.slice(0, 5000), downloadMs: Math.round(tDownload), totalMs: Math.round(performance.now() - t0) });
+    } else if (cmd === "lang") {
+      if (self.bcuSetLang) { bcuSetLang(args.lang); post("stages", JSON.parse(bcuStages(""))); }
     } else if (cmd === "stages") {
       post("stages", JSON.parse(bcuStages("")));
     } else if (cmd === "battleStart") {

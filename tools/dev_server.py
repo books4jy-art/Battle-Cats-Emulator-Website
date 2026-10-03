@@ -21,6 +21,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SITE = os.path.join(ROOT, "site")
 CACHE = os.path.join(ROOT, "tools", ".cache")
 ASSETS = "https://raw.githubusercontent.com/battlecatsultimate/bcu-assets/master/assets/"
+LANG = "https://raw.githubusercontent.com/battlecatsultimate/bcu-assets/master/lang/"
 EXTRA = ("https://raw.githubusercontent.com/battlecatsultimate/BCU_Android/"
          "86400116299340f24aea5e80fc38951a8bb08d93/app/src/main/res/raw/")
 
@@ -57,11 +58,13 @@ class Handler(SimpleHTTPRequestHandler):
     def do_GET(self):  # noqa: N802
         m = re.fullmatch(r"/bcu-assets/(\d+)\.asset\.bcuzip", self.path)
         e = re.fullmatch(r"/bcu-extra/([\w.-]+\.json)", self.path)
-        if not (m or e):
+        n = re.fullmatch(r"/bcu-lang/([a-z]{2}-\w+\.txt)", self.path)
+        if not (m or e or n):
             return super().do_GET()
         rng = self.headers.get("Range")
         try:
-            data = upstream(ASSETS + m.group(1) + ".asset.bcuzip" if m else EXTRA + e.group(1), rng if m else None)
+            url = ASSETS + m.group(1) + ".asset.bcuzip" if m else EXTRA + e.group(1) if e else LANG + n.group(1)
+            data = upstream(url, rng if m else None)
         except Exception as ex:  # noqa: BLE001
             self.send_error(502, str(ex))
             return

@@ -39,6 +39,10 @@ public class Main {
         ImageBuilder.builder = new WebImageBuilder();
         Js.export("bcuLoad", (StrFn) Main::load);
         Js.export("bcuStages", (StrFn) s -> BattleSession.stages());
+        Js.export("bcuSetLang", (StrFn) lang -> {
+            Names.setLanguage(lang);
+            return lang;
+        });
         Js.export("bcuBattleStart", (BattleStartFn) BattleSession::start);
         Js.export("bcuBattleStep", (StepFn) BattleSession::step);
         Js.post("ready", "");
@@ -47,7 +51,7 @@ public class Main {
     /** Builds BCU's virtual file tree from the asset index, then loads the base game (units, enemies, stages...). */
     private static String load(String lang) {
         long t0 = System.currentTimeMillis();
-        CommonStatic.getConfig().lang = "kr".equals(lang) ? CommonStatic.Lang.Locale.KR : CommonStatic.Lang.Locale.EN;
+        Names.setLanguage(lang);
         VFileRoot root = VFile.getBCFileTree();
         int n = 0;
         for (String line : Js.fileList().split("\n")) {
@@ -61,6 +65,7 @@ public class Main {
         Js.post("progress", n + " files in the virtual file tree");
         UserProfile.getBCData().load(s -> Js.post("progress", s), d -> {
         });
+        Names.load();
         return "{\"files\":" + n + ",\"ms\":" + (System.currentTimeMillis() - t0)
                 + ",\"units\":" + UserProfile.getBCData().units.size()
                 + ",\"enemies\":" + UserProfile.getBCData().enemies.size() + "}";

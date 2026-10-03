@@ -33,9 +33,15 @@ worker.onmessage = (ev) => {
     $("load").querySelector("span").textContent = t("loaded");
     worker.postMessage({ cmd: "stages" });
   } else if (type === "stages") {
-    stages = data;
+    const keep = stages.length ? [$("colc").value, $("map").value, $("stage").value] : null;
+    // main story (collection 000003) first, the rest in BCU's order
+    stages = [...data.filter((c) => c.id === "000003"), ...data.filter((c) => c.id !== "000003")];
     fillSelect($("colc"), stages.map((c, i) => [i, c.name || c.id]));
-    // start on the main story: collection "CH" (id 000003), map "EoC 1-3", first stage (Korea)
+    if (keep) { // language switch: same choices, new names
+      $("colc").value = keep[0]; onColc(); $("map").value = keep[1]; onMap(); $("stage").value = keep[2];
+      return;
+    }
+    // start on the main story (collection 000003, listed first), map "EoC 1-3", first stage (Korea)
     const main = stages.findIndex((c) => c.id === "000003");
     if (main >= 0) $("colc").value = main;
     onColc();
@@ -147,5 +153,6 @@ document.querySelectorAll("[data-lang]").forEach((b) => b.onclick = () => {
   try { localStorage.setItem("lang", LANG); } catch (e) { /* storage blocked */ }
   applyLang();
   if (lastFrame) draw(lastFrame);
+  if (stages.length) worker.postMessage({ cmd: "lang", args: { lang: LANG } });
 });
 applyLang();
