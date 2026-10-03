@@ -76,6 +76,16 @@ public class WebGraphics implements FakeGraphics {
             return;
         }
         imageState();
+        if (d < 0 || e < 0) {
+            // A negative width/height means "mirrored" in BCU (Java2D and Android draw it flipped, e.g. a left
+            // arm made from the right-arm picture). Canvas would only move the rectangle, so flip it here.
+            JSObject saved = Canvas.getTransform(c);
+            Canvas.translate(c, x, y);
+            Canvas.scale(c, d < 0 ? -1 : 1, e < 0 ? -1 : 1);
+            Canvas.drawImage(c, src, sx, sy, sw, sh, 0, 0, Math.abs(d), Math.abs(e));
+            Canvas.setTransform(c, saved);
+            return;
+        }
         Canvas.drawImage(c, src, sx, sy, sw, sh, x, y, d, e);
     }
 
