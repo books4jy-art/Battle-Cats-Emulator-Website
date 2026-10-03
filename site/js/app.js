@@ -370,6 +370,27 @@ const levelOf = (s) => {
   return { lv: s.lv ?? u.lv, plus: s.plus ?? u.plus };
 };
 
+/**
+ * Fills a scrolling list with all `items`, 100 at a time: the next batch is added when the end of the list
+ * scrolls into view (long lists like 866 cats stay quick on phones).
+ */
+function fillLazily(box, items, make) {
+  if (box._lazy) box._lazy.disconnect();
+  box.innerHTML = "";
+  let next = 0;
+  const sentinel = document.createElement("div");
+  sentinel.className = "sentinel";
+  const more = () => {
+    const end = Math.min(items.length, next + 100);
+    for (; next < end; next++) box.insertBefore(make(items[next]), sentinel);
+    if (next >= items.length) { box._lazy.disconnect(); sentinel.remove(); }
+  };
+  box.append(sentinel);
+  box._lazy = new IntersectionObserver((en) => { if (en.some((e) => e.isIntersecting)) more(); }, { root: box, rootMargin: "300px" });
+  more();
+  if (next < items.length) box._lazy.observe(sentinel);
+}
+
 const textEl = (cls, text) => Object.assign(document.createElement("span"), { className: cls, textContent: text });
 
 function renderLineup() {
@@ -486,10 +507,8 @@ function renderUnits() {
   box.innerHTML = "";
   const used = new Set(lineup.filter((s, i) => s && i !== pickSlot).map((s) => s.id));
   const cur = lineup[pickSlot];
-  let shown = 0;
-  for (const u of units.units) {
-    if (q && !(String(u.id) === q || String(u.id).padStart(3, "0") === q || u.f.some((n) => n.toLowerCase().includes(q)))) continue;
-    if (++shown > 400) break; // the list is for browsing; searching narrows it down
+  const found = units.units.filter((u) => !q || String(u.id) === q || String(u.id).padStart(3, "0") === q || u.f.some((n) => n.toLowerCase().includes(q)));
+  fillLazily(box, found, (u) => {
     const line = document.createElement("div");
     line.className = "unit";
     line.append(textEl("no", String(u.id).padStart(3, "0")));
@@ -513,8 +532,8 @@ function renderUnits() {
       forms.appendChild(b);
     });
     line.appendChild(forms);
-    box.appendChild(line);
-  }
+    return line;
+  });
 }
 $("search").oninput = renderUnits;
 $("search").onkeydown = (e) => { if (e.key === "Enter") e.preventDefault(); };

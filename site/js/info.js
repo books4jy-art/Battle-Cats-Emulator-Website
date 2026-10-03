@@ -71,20 +71,16 @@ const Info = (() => {
 
   // ---------------------------------------------------------------- cats
   function renderCatList() {
-    const box = $("catList");
-    box.innerHTML = "";
     if (!units) return;
     const q = $("catSearch").value.trim().toLowerCase();
-    let shown = 0;
-    for (const u of units.units) {
-      if (q && !(String(u.id) === q || String(u.id).padStart(3, "0") === q || u.f.some((n) => n.toLowerCase().includes(q)))) continue;
-      if (++shown > 60) break;
+    const found = units.units.filter((u) => !q || String(u.id) === q || String(u.id).padStart(3, "0") === q || u.f.some((n) => n.toLowerCase().includes(q)));
+    fillLazily($("catList"), found, (u) => {
       const b = el("button", "pick");
       b.type = "button";
       b.append(iconEl(u.i[u.f.length - 1]), el("span", "no", String(u.id).padStart(3, "0")), el("span", "nm", u.f[u.f.length - 1] || `#${u.id}`));
       b.onclick = () => showCat(u.id, u.f.length - 1, -1, -1, false);
-      box.append(b);
-    }
+      return b;
+    });
   }
   $("catSearch").oninput = renderCatList;
 
@@ -149,18 +145,15 @@ const Info = (() => {
 
   // ---------------------------------------------------------------- enemies
   function renderEnemyList() {
-    const box = $("enemyList");
-    box.innerHTML = "";
     if (!enemyList) return;
-    let shown = 0;
-    for (const [id, name, icon] of search($("enemySearch"), enemyList, (r) => [r[0], String(r[0]).padStart(3, "0"), r[1]])) {
-      if (++shown > 60) break;
+    const found = search($("enemySearch"), enemyList, (r) => [r[0], String(r[0]).padStart(3, "0"), r[1]]);
+    fillLazily($("enemyList"), found, ([id, name, icon]) => {
       const b = el("button", "pick");
       b.type = "button";
       b.append(enemyIcon(icon), el("span", "no", String(id).padStart(3, "0")), el("span", "nm", name || `#${id}`));
       b.onclick = () => showEnemy(id, 100, 100, false);
-      box.append(b);
-    }
+      return b;
+    });
   }
   $("enemySearch").oninput = renderEnemyList;
   const enemyIcon = (path) => { const img = iconEl(path, true); img.classList.add("eicon"); return img; };
