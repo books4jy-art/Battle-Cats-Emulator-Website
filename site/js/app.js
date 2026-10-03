@@ -94,15 +94,25 @@ worker.onmessage = (ev) => {
     $("overlay").hidden = true;
     $("result").textContent = "";
     $("result").className = "result";
+    // music: the stage's tune, then (if it has one) the boss tune once the enemy base is below mush %
+    stageMusic = { ...data, switched: !(data.mus1 >= 0 && data.mush > 0 && data.mush < 100) };
+    Sound.playMusic(data.mus0, data.loop0);
+    Sound.prepare([data.mus1, 8, 9]);
     loop.start();
   } else if (type === "frame") {
     lastFrame = data;
     row = data.row;
     loop.waiting = false;
     showStats(data);
+    Sound.effects(data.se);
+    if (stageMusic && !stageMusic.switched && data.ebase[0] * 100 / data.ebase[1] < stageMusic.mush) {
+      stageMusic.switched = true;
+      Sound.playMusic(stageMusic.mus1, stageMusic.loop1, false, 2344); // BCU's MUSIC_DELAY
+    }
     if (data.result !== 0) {
       running = false;
       loop.stop();
+      Sound.playMusic(data.result > 0 ? 8 : 9, 0, true); // win / lose jingle
       $("pause").disabled = true;
       $("result").textContent = data.result > 0 ? t("win") : t("lose");
       $("result").className = "result " + (data.result > 0 ? "win" : "lose");
@@ -166,9 +176,12 @@ const loop = {
   stop() { cancelAnimationFrame(this.timer); this.timer = 0; },
 };
 
+let stageMusic = null; // {mus0, loop0, mus1, loop1, mush, switched}
+
 function setPaused(p) {
   if (!running) return;
   paused = p;
+  if (p) Sound.pause(); else Sound.resume();
   $("pause").querySelector("span").textContent = t(p ? "resume" : "pause");
   $("overlay").textContent = t("paused");
   $("overlay").hidden = !p;
@@ -513,6 +526,9 @@ $("run").onclick = () => {
   $("error").hidden = true;
   loop.stop();
   running = false;
+  Sound.stopMusic();
+  // (needs this click: browsers start sound only after the player taps or clicks something)
+  Sound.prepare([]);
   const slots = lineup.map((s) => {
     if (!s) return "-";
     const { lv, plus } = levelOf(s);
@@ -524,6 +540,23 @@ $("run").onclick = () => {
   } });
 };
 $("pause").onclick = () => setPaused(!paused);
+
+// ---- sound buttons (saved per browser)
+function showSoundButtons() {
+  $("seBtn").setAttribute("aria-pressed", String(Sound.prefs.se));
+  $("musicBtn").setAttribute("aria-pressed", String(Sound.prefs.music));
+  $("seBtn").title = t(Sound.prefs.se ? "seOn" : "seOff");
+  $("musicBtn").title = t(Sound.prefs.music ? "musicOn" : "musicOff");
+  $("seBtn").setAttribute("aria-label", $("seBtn").title);
+  $("musicBtn").setAttribute("aria-label", $("musicBtn").title);
+  $("volume").value = Math.round(Sound.prefs.volume * 100);
+  $("volume").title = t("volume");
+  $("volume").setAttribute("aria-label", t("volume"));
+}
+$("seBtn").onclick = () => { Sound.unlock(); Sound.set("se", !Sound.prefs.se); showSoundButtons(); };
+$("musicBtn").onclick = () => { Sound.unlock(); Sound.set("music", !Sound.prefs.music); showSoundButtons(); };
+$("volume").oninput = () => { Sound.unlock(); Sound.set("volume", $("volume").value / 100); };
+showSoundButtons();
 document.querySelectorAll("[data-speed]").forEach((b) => b.onclick = () => {
   speed = +b.dataset.speed;
   document.querySelectorAll("[data-speed]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
@@ -544,6 +577,7 @@ function refreshTexts() {
   $("pause").querySelector("span").textContent = t(paused ? "resume" : "pause");
   $("full").querySelector("span").textContent = t(arena.classList.contains("full") ? "exitFull" : "full");
   $("overlay").textContent = t("paused");
+  showSoundButtons();
   if (lastFrame && !running) $("result").textContent = lastFrame.result > 0 ? t("win") : lastFrame.result < 0 ? t("lose") : "";
   showStorage();
 }

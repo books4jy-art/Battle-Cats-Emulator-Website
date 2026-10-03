@@ -74,6 +74,11 @@
               <button type="button" data-speed="2" aria-pressed="false">4×</button>
             </div>
             <span class="grow"></span>
+            <div class="sound">
+              <button class="tool icon" id="seBtn" type="button" aria-pressed="true"><span class="on">🔊</span><span class="off">🔇</span></button>
+              <button class="tool icon" id="musicBtn" type="button" aria-pressed="true">🎵</button>
+              <input id="volume" type="range" min="0" max="100" step="1">
+            </div>
             <button class="tool" id="full" type="button"><span data-t="full">Full screen</span></button>
           </div>
           <div class="stagewrap">
@@ -111,6 +116,7 @@
 </dialog>
 
 <script src="js/i18n.js"></script>
+<script src="js/audio.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

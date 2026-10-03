@@ -26,6 +26,21 @@ public final class BattleSession {
 
     private static SBCtrl battle;
 
+    /** Sound effects (BCU music numbers) the battle asked for since the last step; each played once per step. */
+    private static final java.util.LinkedHashSet<Integer> sounds = new java.util.LinkedHashSet<>();
+    private static boolean autoMode;
+
+    /** BCU's core asks for a sound effect (CommonStatic.setSE, through WebItf). */
+    public static void sound(int id) {
+        // auto-deploy "presses" every slot each frame: skip its endless "can't afford" beeps
+        if (autoMode && id == common.util.Data.SE_SPEND_FAIL) {
+            return;
+        }
+        if (battle != null && sounds.size() < 32) {
+            sounds.add(id);
+        }
+    }
+
     /** The battle running now (null before the first start). */
     public static SBCtrl battle() {
         return battle;
@@ -139,8 +154,24 @@ public final class BattleSession {
         // one lineup row on screen with a switch button (as in the game), and no hitbox/reference lines
         CommonStatic.getConfig().twoRow = false;
         CommonStatic.getConfig().ref = false;
+        autoMode = auto;
         battle = new SBCtrl(auto ? AUTO : NONE, st, 0, lu.copy(), new int[1], seed); // ints[0]: bit 1 = max worker, bit 2 = sniper
-        return "{\"stage\":" + q(st.toString()) + ",\"len\":" + st.len + "}";
+        sounds.clear();
+        // music: mus0 from the start, mus1 once the enemy base's health drops below mush percent (as BCU's apps)
+        return "{\"stage\":" + q(st.toString()) + ",\"len\":" + st.len
+                + ",\"mus0\":" + musicId(st.mus0) + ",\"loop0\":" + musicLoop(st.mus0)
+                + ",\"mus1\":" + musicId(st.mus1) + ",\"loop1\":" + musicLoop(st.mus1) + ",\"mush\":" + st.mush + "}";
+    }
+
+    /** Number of a base-game music file (bcu-assets/music/NNN.ogg), or -1. */
+    private static int musicId(common.pack.Identifier<common.util.stage.Music> m) {
+        return m != null && common.pack.Identifier.DEF.equals(m.pack) ? m.id : -1;
+    }
+
+    /** Loop start of a music in milliseconds (0: the whole track loops). */
+    private static long musicLoop(common.pack.Identifier<common.util.stage.Music> m) {
+        common.util.stage.Music mu = m == null ? null : common.pack.Identifier.get(m);
+        return mu == null ? 0 : mu.loop;
     }
 
     /**
@@ -248,6 +279,7 @@ public final class BattleSession {
                 .append(",\"result\":").append(result(sb))
                 .append(",\"money\":").append(sb.money).append(",\"maxMoney\":").append(sb.maxMoney)
                 .append(",\"workLv\":").append(sb.work_lv).append(",\"row\":").append(sb.frontLineup)
+                .append(",\"se\":").append(sounds.toString().replace(" ", ""))
                 .append(",\"ebase\":[").append(sb.ebase.health).append(',').append(sb.ebase.maxH).append(',').append(sb.ebase.pos).append(']')
                 .append(",\"ubase\":[").append(sb.ubase.health).append(',').append(sb.ubase.maxH).append(',').append(sb.ubase.pos).append(']')
                 .append(",\"e\":[");
@@ -257,6 +289,7 @@ public final class BattleSession {
                     .append(',').append(e.health).append(',').append(e.maxH).append(']');
             first = false;
         }
+        sounds.clear();
         return out.append("]}").toString();
     }
 

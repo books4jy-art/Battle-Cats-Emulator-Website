@@ -5,7 +5,7 @@ import common.pack.Identifier;
 import common.util.stage.Music;
 import java.io.File;
 
-/** BCU's sound/app hooks for the browser. Sound arrives in a later milestone; until then these do nothing. */
+/** BCU's sound/app hooks for the browser: sound effects are collected for the page to play (see BattleSession). */
 public class WebItf implements CommonStatic.Itf {
     @Override
     public void save(boolean save, boolean exit) {
@@ -24,10 +24,14 @@ public class WebItf implements CommonStatic.Itf {
 
     @Override
     public void setSE(int mus) {
+        bcuweb.BattleSession.sound(mus);
     }
 
     @Override
     public void setSE(Identifier<Music> mus) {
+        if (mus != null && Identifier.DEF.equals(mus.pack)) {
+            bcuweb.BattleSession.sound(mus.id);
+        }
     }
 
     @Override

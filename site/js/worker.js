@@ -20,6 +20,7 @@ const NAME_FILES = ["en", "kr", "jp"].flatMap((l) => ["StageName", "UnitName", "
 const CACHE = "bcu-assets-v1";       // saved pack ranges
 const EXTRA_CACHE = "bcu-extra-v1";  // saved small files (ability texts, name lists)
 const SNAP_CACHE = "bcu-startup-v1"; // start-up data, decrypted, in one piece (faster return visits)
+const MUSIC_CACHE = "bcu-music-v1";  // music and sound effects (.ogg; js/audio.js plays and saves them too)
 // ?assets=local: get game data through tools/dev_server.py instead of GitHub (testing, slow networks)
 const LOCAL = new URL(self.location.href).searchParams.get("assets") === "local";
 // Downloaded in bulk before the game starts: all text data, plus every animation model and sprite-sheet
@@ -244,9 +245,18 @@ async function prefetch(paths, label, quiet) {
   let total = ranges.reduce((n, r) => n + (r.end - r.start), 0), done = 0;
   for (const list of fromSaved.values()) total += list.reduce((n, f) => n + (f.end - f.start), 0);
   const progress = (n) => { done += n; if (!quiet) post("download", { label, done, total }); };
-  // saved: one read per saved range, covering the files needed from it
-  await pool([...fromSaved], 8, async ([r, list]) => {
-    const lo = Math.min(...list.map((f) => f.start)), hi = Math.max(...list.map((f) => f.end));
+  // saved: read clusters of neighbouring files from each saved range (not the whole range: the ones from
+  // "Download everything" are up to 8 MB and may hold only a few of the files needed)
+  const reads = [];
+  for (const [r, list] of fromSaved) {
+    list.sort((a, b) => a.start - b.start);
+    let cur = null;
+    for (const f of list) {
+      if (cur && f.start - cur.hi <= MERGE_GAP) { cur.hi = Math.max(cur.hi, f.end); cur.files.push(f); }
+      else { cur = { r, lo: f.start, hi: f.end, files: [f] }; reads.push(cur); }
+    }
+  }
+  await pool(reads, 8, async ({ r, lo, hi, files: list }) => {
     const buf = new Uint8Array(await r.blob.slice(lo - r.start, hi - r.start).arrayBuffer());
     stats.cached++;
     for (const f of list) decryptFile(f.path, buf, lo);
@@ -260,6 +270,20 @@ async function prefetch(paths, label, quiet) {
   });
 }
 
+// ---- music files (bcu-assets/music/NNN.ogg, listed in index.music as [id, size])
+const musicSaved = new Set();
+const musicUrl = (id) => (LOCAL ? self.location.origin + "/bcu-music/" : index.music_url.replace("{id}.ogg", ""))
+  + String(id).padStart(3, "0") + ".ogg";
+
+async function loadMusicSaved() {
+  musicSaved.clear();
+  if (!self.caches || !index.music) return;
+  const cache = await caches.open(MUSIC_CACHE).catch(() => null);
+  if (!cache) return;
+  const byUrl = new Map(index.music.map(([id]) => [musicUrl(id), id]));
+  for (const req of await cache.keys()) if (byUrl.has(req.url)) musicSaved.add(byUrl.get(req.url));
+}
+
 /** How much of the game is saved in this browser: {saved: bytes of saved ranges, have/total: bytes of game files}. */
 function storageInfo() {
   let savedBytes = 0, have = 0, total = 0;
@@ -268,6 +292,10 @@ function storageInfo() {
     const [zip, start, end] = fileRange(path);
     total += end - start;
     if (findSaved(zip, start, end)) have += end - start;
+  }
+  for (const [id, size] of index.music || []) {
+    total += size;
+    if (musicSaved.has(id)) { have += size; savedBytes += size; }
   }
   return { saved: savedBytes, have, total };
 }
@@ -284,12 +312,23 @@ async function saveAll() {
       if (!findSaved(zip, start, end)) missing.push({ zip, start, end });
     }
     const ranges = planRanges(missing, 256 << 10, 8 << 20);
-    const total = ranges.reduce((n, r) => n + (r.end - r.start), 0);
+    await loadMusicSaved();
+    const music = (index.music || []).filter(([id]) => !musicSaved.has(id));
+    const total = ranges.reduce((n, r) => n + (r.end - r.start), 0) + music.reduce((n, m) => n + m[1], 0);
     let done = 0;
     post("saveAll", { done, total });
     await pool(ranges, 6, async (r) => {
       await saveRange(r.zip, r.start, r.end, await download(r));
       done += r.end - r.start;
+      post("saveAll", { done, total });
+    });
+    const cache = await caches.open(MUSIC_CACHE);
+    await pool(music, 4, async ([id, size]) => {
+      const res = await fetch(musicUrl(id));
+      if (!res.ok) throw new Error(`couldn't download music ${id} (HTTP ${res.status})`);
+      await cache.put(musicUrl(id), res);
+      musicSaved.add(id);
+      done += size;
       post("saveAll", { done, total });
     });
   } finally {
@@ -433,7 +472,8 @@ self.onmessage = async (ev) => {
       const tSaved = performance.now();
       const startup = Object.keys(index.files).filter((p) => STARTUP.test(p));
       const timed = (name, pr) => pr.then((v) => { stats[name + "Ms"] = Math.round(performance.now() - tSaved); return v; });
-      const [, , snap] = await Promise.all([timed("extras", loadExtras()), timed("ranges", loadSaved()), timed("snap", self.caches ? loadSnapshot() : Promise.resolve(false))]);
+      const [, , snap] = await Promise.all([timed("extras", loadExtras()), timed("ranges", loadSaved()),
+        timed("snap", self.caches ? loadSnapshot() : Promise.resolve(false)), loadMusicSaved()]);
       stats.savedMs = Math.round(performance.now() - tSaved);
       await prefetch(startup, "data");
       const tDownload = performance.now() - t0;
@@ -451,11 +491,11 @@ self.onmessage = async (ev) => {
         post("units", JSON.parse(bcuUnits("")));
       }
     } else if (cmd === "storage") {
-      if (index) post("storage", storageInfo());
+      if (index) { await loadMusicSaved(); post("storage", storageInfo()); }
     } else if (cmd === "saveAll") {
       await saveAll();
     } else if (cmd === "clear") {
-      if (self.caches) await Promise.all([caches.delete(CACHE), caches.delete(EXTRA_CACHE), caches.delete(SNAP_CACHE)]);
+      if (self.caches) await Promise.all([caches.delete(CACHE), caches.delete(EXTRA_CACHE), caches.delete(SNAP_CACHE), caches.delete(MUSIC_CACHE)]);
       saved.clear();
       post("cleared", "");
     } else if (cmd === "stages") {

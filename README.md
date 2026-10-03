@@ -42,6 +42,14 @@ The core runs under TeaVM without changes because:
   (a cheap "not modified" answer when nothing changed), so new versions show up immediately when online.
 - Returning visitors load the game automatically; "Delete saved game data" clears it all.
 
+### Sound
+
+BCU's music and sound effects are plain `.ogg` files in bcu-assets' `music/` folder (`tools/build_index.py`
+lists them in `index.json`). The core asks for sound effects itself (`CommonStatic.setSE` → `WebItf` →
+`BattleSession`, sent with each battle step); like BCU's apps, the page picks the music: the stage's tune, its
+boss tune once the enemy base is below the stage's health threshold, and the win/lose jingles.
+`site/js/audio.js` plays them with Web Audio and saves the files for offline play.
+
 Known difference: TeaVM's JavaScript computes Java `float`s in double precision, so tiny rounding
 differences can appear (e.g. a few money points over a long battle). Battles play out the same.
 

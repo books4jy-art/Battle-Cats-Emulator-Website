@@ -22,6 +22,7 @@ SITE = os.path.join(ROOT, "site")
 CACHE = os.path.join(ROOT, "tools", ".cache")
 ASSETS = "https://raw.githubusercontent.com/battlecatsultimate/bcu-assets/master/assets/"
 LANG = "https://raw.githubusercontent.com/battlecatsultimate/bcu-assets/master/lang/"
+MUSIC = "https://raw.githubusercontent.com/battlecatsultimate/bcu-assets/master/music/"
 EXTRA = ("https://raw.githubusercontent.com/battlecatsultimate/BCU_Android/"
          "86400116299340f24aea5e80fc38951a8bb08d93/app/src/main/res/raw/")
 
@@ -59,17 +60,19 @@ class Handler(SimpleHTTPRequestHandler):
         m = re.fullmatch(r"/bcu-assets/(\d+)\.asset\.bcuzip", self.path)
         e = re.fullmatch(r"/bcu-extra/([\w.-]+\.json)", self.path)
         n = re.fullmatch(r"/bcu-lang/([a-z]{2}-\w+\.txt)", self.path)
-        if not (m or e or n):
+        o = re.fullmatch(r"/bcu-music/(\d{3}\.ogg)", self.path)
+        if not (m or e or n or o):
             return super().do_GET()
         rng = self.headers.get("Range")
         try:
-            url = ASSETS + m.group(1) + ".asset.bcuzip" if m else EXTRA + e.group(1) if e else LANG + n.group(1)
+            url = (ASSETS + m.group(1) + ".asset.bcuzip" if m else EXTRA + e.group(1) if e
+                   else LANG + n.group(1) if n else MUSIC + o.group(1))
             data = upstream(url, rng if m else None)
         except Exception as ex:  # noqa: BLE001
             self.send_error(502, str(ex))
             return
         self.send_response(206 if (m and rng) else 200)
-        self.send_header("Content-Type", "application/octet-stream")
+        self.send_header("Content-Type", "audio/ogg" if o else "application/octet-stream")
         self.send_header("Content-Length", str(len(data)))
         if m and rng:
             start = int(re.match(r"bytes=(\d+)-", rng).group(1))
