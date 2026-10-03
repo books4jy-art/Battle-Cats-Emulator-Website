@@ -73,7 +73,7 @@ select.input option { background: #10131a; color: var(--fg); }
 .seg2, .seg3 { display: inline-grid; grid-auto-flow: column; gap: 4px; background: var(--w-05); border-radius: 8px; padding: 4px; }
 .seg2 button, .seg3 button {
   height: 30px; min-width: 46px; padding: 0 10px; border: 0; border-radius: 6px; background: transparent;
-  font-size: 12px; color: var(--w-60); cursor: pointer;
+  font-size: 12px; color: var(--w-60); cursor: pointer; white-space: nowrap;
 }
 .seg2 button[aria-pressed="true"], .seg3 button[aria-pressed="true"] { background: var(--w-10); color: var(--fg); }
 
@@ -81,7 +81,8 @@ select.input option { background: #10131a; color: var(--fg); }
 .progress .bar { height: 100%; width: 0; background: var(--sky-400); transition: width .2s; }
 
 canvas#field {
-  display: block; width: 100%; height: auto; aspect-ratio: 960 / 220;
+  display: block; width: 100%; height: auto; aspect-ratio: 2 / 1;
+  margin-top: 4px;
   border: 1px solid var(--w-10); border-radius: 12px; background: #0e1219;
 }
 .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 12px; }

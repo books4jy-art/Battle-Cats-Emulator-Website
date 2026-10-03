@@ -1,4 +1,4 @@
-package bcuweb.web;
+package bcuweb.jvm;
 
 import common.system.fake.FakeGraphics;
 import common.system.fake.FakeImage;
@@ -6,8 +6,8 @@ import java.io.InputStream;
 import java.util.function.Supplier;
 
 /**
- * Milestone 1 stand-in for images: remembers where the picture comes from and reads only its size
- * (from the PNG header) when asked. Real drawing arrives in milestone 2.
+ * Image stand-in for the JVM test harness (no drawing there): remembers where the picture comes from
+ * and reads only its size (from the PNG header) when asked.
  */
 public class LazyImage implements FakeImage {
     private final Supplier<InputStream> source;

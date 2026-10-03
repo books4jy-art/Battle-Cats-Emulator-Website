@@ -1,5 +1,6 @@
 package bcuweb;
 
+import bcuweb.battle.BattleView;
 import bcuweb.web.Js;
 import bcuweb.web.WebContext;
 import bcuweb.web.WebFileData;
@@ -33,6 +34,11 @@ public class Main {
         String call(int frames);
     }
 
+    @JSFunctor
+    public interface ObjFn extends JSObject {
+        String call(JSObject arg);
+    }
+
     public static void main(String[] args) {
         CommonStatic.ctx = new WebContext();
         CommonStatic.def = new WebItf();
@@ -45,6 +51,11 @@ public class Main {
         });
         Js.export("bcuBattleStart", (BattleStartFn) BattleSession::start);
         Js.export("bcuBattleStep", (StepFn) BattleSession::step);
+        Js.export("bcuAttachCanvas", (ObjFn) c -> {
+            BattleView.attach(c);
+            return "";
+        });
+        Js.export("bcuDraw", (StepFn) speed -> String.valueOf(BattleView.draw(speed)));
         Js.post("ready", "");
     }
 

@@ -7,26 +7,26 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.function.Supplier;
 
-/** BCU's image factory for the browser. Milestone 1: images that know only their size. */
+/** BCU's image factory for the browser. Images are drawn with the browser's Canvas API (see WebImage). */
 public class WebImageBuilder extends ImageBuilder<Object> {
     @Override
     public FakeImage build(File f) throws IOException {
-        return new LazyImage(0, 0);
+        return new WebImage(1, 1);
     }
 
     @Override
     public FakeImage build(Supplier<InputStream> sup) throws IOException {
-        return new LazyImage(sup);
+        return new WebImage(sup);
     }
 
     @Override
     public FakeImage build(Object o) {
-        return o instanceof FakeImage ? (FakeImage) o : new LazyImage(0, 0);
+        return o instanceof FakeImage ? (FakeImage) o : new WebImage(1, 1);
     }
 
     @Override
     public FakeImage build(int w, int h) {
-        return new LazyImage(w, h);
+        return new WebImage(w, h);
     }
 
     @Override

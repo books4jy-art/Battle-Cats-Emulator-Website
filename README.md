@@ -13,7 +13,7 @@ and runs entirely in the visitor's browser, so the site is plain static files.
 |---|---|
 | `bcu-core/` | [BCU_java_util_common](https://github.com/battlecatsultimate/BCU_java_util_common) as a git submodule, **never edited** |
 | `patches/` | Patches applied to a copy of the core at build time (currently none) |
-| `platform/` | Browser platform code: entry point, TeaVM build plugins, small JDK stand-ins |
+| `platform/` | Browser platform code: entry point, Canvas drawing (`bcuweb.web`), the battle painter copied from BCU Android (`bcuweb.battle`), TeaVM build plugins, small JDK stand-ins |
 | `tools/build_index.py` | Builds `site/data/index.json`: where each game file sits inside BCU's asset packs |
 | `site/` | The static website (TeaVM output goes to `site/teavm/`); `js/worker.js` runs the core in a Web Worker |
 | `platform/src/jvm/` | Test harness: the same battle code on a normal Java VM, to compare with the browser |

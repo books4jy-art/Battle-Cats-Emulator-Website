@@ -1,8 +1,6 @@
 package bcuweb.jvm;
 
 import bcuweb.BattleSession;
-import bcuweb.web.LazyImage;
-import bcuweb.web.WebImageBuilder;
 import bcuweb.web.WebItf;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -41,7 +39,7 @@ import javax.crypto.spec.SecretKeySpec;
  * <pre>./gradlew runJvmBattle --args="000003 9 0 60"   (collection, map, stage, seconds)</pre>
  */
 public class JvmBattle {
-    private static final String SERVER = System.getProperty("bcu.server", "http://localhost:8765");
+    private static final String SERVER = System.getProperty("bcu.server", "http://localhost:8000");
     private static final byte[] IV = hex("5af764bb8e1a80e202fe24a3d56add1d");
     private static final HttpClient HTTP = HttpClient.newHttpClient();
     private static JsonObject index;
@@ -55,7 +53,32 @@ public class JvmBattle {
         index = JsonParser.parseString(Files.readString(Path.of("site/data/index.json"))).getAsJsonObject();
         CommonStatic.ctx = new JvmContext();
         CommonStatic.def = new WebItf();
-        ImageBuilder.builder = new WebImageBuilder();
+        ImageBuilder.builder = new ImageBuilder<Object>() {
+            @Override
+            public FakeImage build(java.io.File f) {
+                return new LazyImage(0, 0);
+            }
+
+            @Override
+            public FakeImage build(java.util.function.Supplier<java.io.InputStream> sup) {
+                return new LazyImage(sup);
+            }
+
+            @Override
+            public FakeImage build(Object o) {
+                return o instanceof FakeImage ? (FakeImage) o : new LazyImage(0, 0);
+            }
+
+            @Override
+            public FakeImage build(int w, int h) {
+                return new LazyImage(w, h);
+            }
+
+            @Override
+            public boolean write(FakeImage o, String fmt, Object out) {
+                return false;
+            }
+        };
         VFileRoot root = VFile.getBCFileTree();
         for (Map.Entry<String, com.google.gson.JsonElement> e : index.getAsJsonObject("files").entrySet()) {
             root.build(e.getKey(), new JvmFileData(e.getKey(), e.getValue().getAsJsonArray()));

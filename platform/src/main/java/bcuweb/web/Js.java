@@ -34,6 +34,9 @@ public final class Js {
     @JSBody(params = { "name", "fn" }, script = "self[name] = fn;")
     public static native void export(String name, bcuweb.Main.StepFn fn);
 
+    @JSBody(params = { "name", "fn" }, script = "self[name] = fn;")
+    public static native void export(String name, bcuweb.Main.ObjFn fn);
+
     public static byte[] bytes(Int8Array a) {
         return a == null ? null : a.copyToJavaArray();
     }

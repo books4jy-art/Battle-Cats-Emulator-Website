@@ -22,6 +22,11 @@ public final class BattleSession {
 
     private static SBCtrl battle;
 
+    /** The battle running now (null before the first start). */
+    public static SBCtrl battle() {
+        return battle;
+    }
+
     /** Milestone 1 "player": keeps trying to deploy every cat in the front row and to level up the worker. */
     private static final CommonStatic.FakeKey AUTO = new CommonStatic.FakeKey() {
         @Override
@@ -81,6 +86,9 @@ public final class BattleSession {
         lu.lu.renew();
         // deploy on press (BCU's optional "button delay" selects first and deploys a few frames later)
         CommonStatic.getConfig().buttonDelay = false;
+        // one lineup row on screen with a switch button (as in the game), and no hitbox/reference lines
+        CommonStatic.getConfig().twoRow = false;
+        CommonStatic.getConfig().ref = false;
         battle = new SBCtrl(AUTO, st, 0, lu.copy(), new int[1], seed); // ints[0]: bit 1 = max worker, bit 2 = sniper
         return "{\"stage\":" + q(st.toString()) + ",\"len\":" + st.len + "}";
     }

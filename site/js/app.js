@@ -10,6 +10,20 @@ let battleLen = 0;
 let lastFrame = null;
 const SEED = new URLSearchParams(location.search).has("seed") ? +new URLSearchParams(location.search).get("seed") : null; // ?seed=1 repeats a battle exactly (testing)
 
+// The battle is drawn by the worker (BCU's own painter) on this canvas, handed over as an OffscreenCanvas.
+const field = $("field");
+if (field.transferControlToOffscreen) {
+  const off = field.transferControlToOffscreen();
+  worker.postMessage({ cmd: "canvas", args: { canvas: off } }, [off]);
+  // keep the drawing sharp: canvas pixels = its size on screen × device pixel ratio
+  const fit = () => {
+    const r = field.getBoundingClientRect(), dpr = Math.min(window.devicePixelRatio || 1, 3);
+    if (r.width > 0) worker.postMessage({ cmd: "resize", args: { w: Math.round(r.width * dpr), h: Math.round(r.height * dpr) } });
+  };
+  new ResizeObserver(fit).observe(field);
+  fit();
+}
+
 function showError(msg) {
   $("error").textContent = msg;
   $("error").hidden = false;
@@ -56,7 +70,7 @@ worker.onmessage = (ev) => {
     step();
   } else if (type === "frame") {
     lastFrame = data;
-    draw(data);
+    showStats(data);
     if (data.result !== 0 || data.time >= 30 * 600) {
       running = false;
       $("run").disabled = false;
@@ -99,29 +113,8 @@ function onMap() {
   fillSelect($("stage"), m.stages.map((s, i) => [i, `${i + 1}. ${s}`]));
 }
 
-// ---------------------------------------------------------------- drawing (milestone 1: simple shapes)
-function draw(f) {
-  const cv = $("field"), g = cv.getContext("2d");
-  const W = cv.width, H = cv.height, pad = 40, ground = H - 50;
-  g.clearRect(0, 0, W, H);
-  const lo = Math.min(f.ebase[2], f.ubase[2]), hi = Math.max(f.ebase[2], f.ubase[2]);
-  const x = (pos) => pad + (W - 2 * pad) * (pos - lo) / Math.max(1, hi - lo);
-  g.strokeStyle = "rgba(255,255,255,.15)";
-  g.beginPath(); g.moveTo(pad - 20, ground); g.lineTo(W - pad + 20, ground); g.stroke();
-  const base = (b, color) => {
-    const bx = x(b[2]);
-    g.fillStyle = color; g.fillRect(bx - 14, ground - 60, 28, 60);
-    g.fillStyle = "rgba(255,255,255,.12)"; g.fillRect(bx - 20, ground - 76, 40, 6);
-    g.fillStyle = color; g.fillRect(bx - 20, ground - 76, 40 * Math.max(0, b[0]) / Math.max(1, b[1]), 6);
-  };
-  base(f.ebase, "#f87171");
-  base(f.ubase, "#38bdf8");
-  for (const [pos, dire, hp, maxHp] of f.e) {
-    const ex = x(pos), cat = dire === -1;
-    const h = 10 + 26 * Math.max(0, hp) / Math.max(1, maxHp);
-    g.fillStyle = cat ? "rgba(125,211,252,.85)" : "rgba(252,165,165,.85)";
-    g.fillRect(ex - 4, ground - h, 8, h);
-  }
+// ---------------------------------------------------------------- numbers under the battle
+function showStats(f) {
   $("sTime").textContent = (f.time / 30).toFixed(1) + "s";
   $("sMoney").textContent = `${f.money} / ${f.maxMoney}`;
   $("sEbase").textContent = `${Math.max(0, f.ebase[0])} / ${f.ebase[1]}`;
@@ -130,6 +123,7 @@ function draw(f) {
 
 // ---------------------------------------------------------------- controls
 $("load").onclick = () => {
+  if (!field.transferControlToOffscreen) return showError(t("noCanvas"));
   $("load").disabled = true;
   $("load").querySelector("span").textContent = t("loading");
   $("error").hidden = true;
@@ -152,7 +146,7 @@ document.querySelectorAll("[data-lang]").forEach((b) => b.onclick = () => {
   LANG = b.dataset.lang;
   try { localStorage.setItem("lang", LANG); } catch (e) { /* storage blocked */ }
   applyLang();
-  if (lastFrame) draw(lastFrame);
+  if (lastFrame) showStats(lastFrame);
   if (stages.length) worker.postMessage({ cmd: "lang", args: { lang: LANG } });
 });
 applyLang();

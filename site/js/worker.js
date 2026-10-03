@@ -165,6 +165,48 @@ async function loadExtras() {
   ]);
 }
 
+// ---------------------------------------------------------------- drawing
+// Canvas helpers the Java side calls (bcuweb.web.Canvas) that need local variables.
+self.bcuCanvas = {
+  gradRect(c, x, y, w, h, top, bottom) {
+    const g = c.createLinearGradient(x, y, x, y + h);
+    g.addColorStop(0, top); g.addColorStop(1, bottom);
+    const s = c.fillStyle;
+    c.fillStyle = g; c.fillRect(x, y, w, h); c.fillStyle = s;
+  },
+  getPixel(c, x, y) {
+    const d = c.getImageData(x, y, 1, 1).data;
+    return (d[3] << 24) | (d[0] << 16) | (d[1] << 8) | d[2];
+  },
+  setPixel(c, x, y, argb) {
+    const d = new ImageData(1, 1);
+    d.data[0] = (argb >> 16) & 255; d.data[1] = (argb >> 8) & 255; d.data[2] = argb & 255; d.data[3] = (argb >>> 24) & 255;
+    c.putImageData(d, x, y);
+  },
+  /** Copy of a bitmap with colour channels swapped: output r/g/b take input channel r/g/b (0 red, 1 green, 2 blue). */
+  swapChannels(img, r, g, b) {
+    const cv = new OffscreenCanvas(Math.max(1, img.width), Math.max(1, img.height)), x = cv.getContext("2d");
+    x.drawImage(img, 0, 0);
+    const d = x.getImageData(0, 0, cv.width, cv.height), p = d.data;
+    for (let i = 0; i < p.length; i += 4) {
+      const v = [p[i], p[i + 1], p[i + 2]];
+      p[i] = v[r]; p[i + 1] = v[g]; p[i + 2] = v[b];
+    }
+    x.putImageData(d, 0, 0);
+    return cv;
+  },
+};
+let canvas = null;   // OffscreenCanvas from the page
+let redrawTimer = 0;
+
+/** Draws the battle's current frame; if pictures are still decoding, draws it again once they're ready. */
+function draw() {
+  if (!canvas || !self.bcuDraw) return;
+  clearTimeout(redrawTimer);
+  const pending = +bcuDraw(1);
+  if (pending > 0) redrawTimer = setTimeout(draw, 30);
+}
+
 // ---------------------------------------------------------------- messages from the page
 self.onmessage = async (ev) => {
   const { cmd, args } = ev.data;
@@ -180,15 +222,31 @@ self.onmessage = async (ev) => {
       importScripts("../teavm/js/bcu.js");
       await new Promise((ok) => { javaReady = ok; main([]); }); // wires the core and defines bcuLoad & co.
       const info = JSON.parse(bcuLoad(args.lang));
+      if (canvas) bcuAttachCanvas(canvas);
       post("loaded", { ...info, stats, onDemand: onDemandLog.slice(0, 5000), downloadMs: Math.round(tDownload), totalMs: Math.round(performance.now() - t0) });
     } else if (cmd === "lang") {
       if (self.bcuSetLang) { bcuSetLang(args.lang); post("stages", JSON.parse(bcuStages(""))); }
     } else if (cmd === "stages") {
       post("stages", JSON.parse(bcuStages("")));
+    } else if (cmd === "canvas") {
+      canvas = args.canvas;
+      if (self.bcuAttachCanvas) bcuAttachCanvas(canvas);
+    } else if (cmd === "resize") {
+      if (canvas && (canvas.width !== args.w || canvas.height !== args.h)) {
+        canvas.width = args.w; canvas.height = args.h;
+        draw();
+      }
     } else if (cmd === "battleStart") {
-      post("battle", JSON.parse(bcuBattleStart(args.colc, args.map, args.stage, args.seed)));
+      const res = JSON.parse(bcuBattleStart(args.colc, args.map, args.stage, args.seed));
+      // let the first pictures (background, castles, lineup, enemies) decode before the battle runs
+      for (const t0 = performance.now(); canvas && +bcuDraw(1) > 0 && performance.now() - t0 < 5000;) {
+        await new Promise((ok) => setTimeout(ok, 20));
+      }
+      post("battle", res);
     } else if (cmd === "battleStep") {
-      post("frame", JSON.parse(bcuBattleStep(args.frames)));
+      const res = JSON.parse(bcuBattleStep(args.frames));
+      draw();
+      post("frame", res);
     }
   } catch (e) {
     post("error", (e && e.message) || String(e));
