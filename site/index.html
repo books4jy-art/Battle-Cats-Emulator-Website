@@ -38,23 +38,42 @@
         <p class="hint" id="loadStatus"></p>
       </div>
 
+      <div id="lineupBox" hidden>
+        <p class="section-title" data-t="lineupTitle">2 · Lineup</p>
+        <div class="lineup" id="lineup"></div>
+        <p class="hint" data-t="lineupHint">Tap a slot to choose a cat, its form and level. The second row is optional (swipe up/down in battle to switch rows).</p>
+      </div>
+
       <div id="battleBox" hidden>
-        <p class="section-title" data-t="battleTitle">2 · Battle simulation</p>
+        <p class="section-title" data-t="battleTitle">3 · Battle</p>
         <div class="row3">
           <label class="field"><span class="label" data-t="colc">Collection</span><select class="input" id="colc"></select></label>
           <label class="field"><span class="label" data-t="map">Map</span><select class="input" id="map"></select></label>
           <label class="field"><span class="label" data-t="stage">Stage</span><select class="input" id="stage"></select></label>
         </div>
-        <p class="hint" data-t="autoHint">The first five basic cats are deployed automatically whenever they can be.</p>
         <div class="row-btns">
-          <button class="btn btn-primary" id="run" type="button" data-t="run">Run battle</button>
-          <div class="seg3" role="group" aria-label="Speed">
-            <button type="button" data-speed="1" aria-pressed="true">1×</button>
-            <button type="button" data-speed="4" aria-pressed="false">4×</button>
-            <button type="button" data-speed="0" aria-pressed="false" data-t="instant">Instant</button>
+          <button class="btn btn-primary" id="run" type="button" data-t="run">Start battle</button>
+          <label class="check"><input type="checkbox" id="auto"> <span data-t="auto">Auto-deploy the front row</span></label>
+        </div>
+
+        <div class="arena" id="arena">
+          <div class="toolbar">
+            <button class="tool" id="pause" type="button" disabled><span data-t="pause">Pause</span></button>
+            <div class="seg3" role="group" aria-label="Speed">
+              <button type="button" data-speed="0" aria-pressed="true">1×</button>
+              <button type="button" data-speed="1" aria-pressed="false">2×</button>
+              <button type="button" data-speed="2" aria-pressed="false">4×</button>
+            </div>
+            <span class="grow"></span>
+            <button class="tool" id="full" type="button"><span data-t="full">Full screen</span></button>
+          </div>
+          <div class="stagewrap">
+            <canvas id="field" width="960" height="480"></canvas>
+            <div class="overlay" id="overlay" hidden></div>
+            <div class="rotate" id="rotate" data-t="rotate">Turn your phone sideways for a bigger battle.</div>
           </div>
         </div>
-        <canvas id="field" width="960" height="480"></canvas>
+        <p class="hint" id="controls" data-t="controls">Tap a cat to deploy it · bottom left: worker level-up · bottom right: cat cannon · drag to scroll · pinch or mouse wheel to zoom · swipe up/down on the lineup to switch rows. Keys: 1–5 deploy, Q worker, E cannon, R switch row, P pause.</p>
         <div class="stat-grid">
           <div class="stat"><label data-t="time">Time</label><b id="sTime">–</b></div>
           <div class="stat"><label data-t="money">Money</label><b id="sMoney">–</b></div>
@@ -69,6 +88,18 @@
     <p class="hint foot" data-t="foot">Private test build. Battle Cats © PONOS. Battle Cats Ultimate by the BCU team.</p>
   </section>
 </main>
+
+<dialog class="picker" id="picker">
+  <form method="dialog" class="picker-in">
+    <div class="picker-head">
+      <b id="pickTitle"></b>
+      <button class="tool" value="close" type="submit" data-t="close">Close</button>
+    </div>
+    <input class="input" id="search" type="search" autocomplete="off">
+    <div class="picked" id="picked"></div>
+    <div class="units" id="units"></div>
+  </form>
+</dialog>
 
 <script src="js/i18n.js"></script>
 <script src="js/app.js"></script>

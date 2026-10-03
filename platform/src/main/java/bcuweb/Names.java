@@ -89,8 +89,9 @@ public final class Names {
             if (strs.length < 2) {
                 continue;
             }
-            Unit u = UserProfile.getBCData().units.get(CommonStatic.parseIntN(strs[0]));
-            if (u == null) {
+            int id = CommonStatic.parseIntN(strs[0]);
+            Unit u = UserProfile.getBCData().units.get(id);
+            if (u == null || u.id.id != id) { // the name lists can list newer cats than the game data has
                 continue;
             }
             for (int i = 0; i < Math.min(u.forms.length, strs.length - 1); i++) {
@@ -106,8 +107,9 @@ public final class Names {
             if (strs.length < 2) {
                 continue;
             }
-            Enemy e = UserProfile.getBCData().enemies.get(CommonStatic.parseIntN(strs[0]));
-            if (e != null) {
+            int id = CommonStatic.parseIntN(strs[0]);
+            Enemy e = UserProfile.getBCData().enemies.get(id);
+            if (e != null && e.id.id == id) {
                 MultiLangCont.getStatic().ENAME.put(locale, e, strs[1].trim());
             }
         }

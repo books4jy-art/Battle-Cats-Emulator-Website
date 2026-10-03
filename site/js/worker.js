@@ -138,7 +138,7 @@ async function fetchRange(cache, r) {
 }
 
 /** Downloads many files with a few requests in parallel, reporting progress. */
-async function prefetch(paths, label) {
+async function prefetch(paths, label, quiet) {
   const ranges = planRanges(paths);
   const total = ranges.reduce((n, r) => n + (r.end - r.start), 0);
   let done = 0, next = 0;
@@ -148,7 +148,7 @@ async function prefetch(paths, label) {
       const r = ranges[next++];
       await fetchRange(cache, r);
       done += r.end - r.start;
-      post("download", { label, done, total });
+      if (!quiet) post("download", { label, done, total });
     }
   };
   await Promise.all(Array.from({ length: PARALLEL }, work));
@@ -198,13 +198,34 @@ self.bcuCanvas = {
 };
 let canvas = null;   // OffscreenCanvas from the page
 let redrawTimer = 0;
+let speed = 0;       // BCU speed setting, for the speed icon
 
 /** Draws the battle's current frame; if pictures are still decoding, draws it again once they're ready. */
 function draw() {
   if (!canvas || !self.bcuDraw) return;
   clearTimeout(redrawTimer);
-  const pending = +bcuDraw(1);
+  const pending = +bcuDraw(speed);
   if (pending > 0) redrawTimer = setTimeout(draw, 30);
+}
+
+/** Lineup icons for the page: downloads the cats' deploy-icon files (cached) and cuts out the icon. */
+async function icons(paths, cut) {
+  await prefetch(paths.filter((p) => index.files[p]), "icons", true);
+  const [x, y, w, h] = cut;
+  for (const path of paths) {
+    let blob = null;
+    try {
+      const bytes = files.get(path);
+      if (bytes) {
+        const bmp = await createImageBitmap(new Blob([bytes], { type: "image/png" }));
+        const c = new OffscreenCanvas(w, h);
+        c.getContext("2d").drawImage(bmp, x, y, w, h, 0, 0, w, h);
+        bmp.close();
+        blob = await c.convertToBlob({ type: "image/png" });
+      }
+    } catch (e) { /* broken image: no icon */ }
+    post("icon", { path, blob });
+  }
 }
 
 // ---------------------------------------------------------------- messages from the page
@@ -225,7 +246,11 @@ self.onmessage = async (ev) => {
       if (canvas) bcuAttachCanvas(canvas);
       post("loaded", { ...info, stats, onDemand: onDemandLog.slice(0, 5000), downloadMs: Math.round(tDownload), totalMs: Math.round(performance.now() - t0) });
     } else if (cmd === "lang") {
-      if (self.bcuSetLang) { bcuSetLang(args.lang); post("stages", JSON.parse(bcuStages(""))); }
+      if (self.bcuSetLang) {
+        bcuSetLang(args.lang);
+        post("stages", JSON.parse(bcuStages("")));
+        post("units", JSON.parse(bcuUnits("")));
+      }
     } else if (cmd === "stages") {
       post("stages", JSON.parse(bcuStages("")));
     } else if (cmd === "canvas") {
@@ -237,16 +262,27 @@ self.onmessage = async (ev) => {
         draw();
       }
     } else if (cmd === "battleStart") {
-      const res = JSON.parse(bcuBattleStart(args.colc, args.map, args.stage, args.seed));
+      // download the battle's animations in bulk first (much faster than one file at a time once it runs)
+      const dirs = bcuBattleFiles(args.colc, args.map, args.stage, 0, args.lineup, false).split("\n").filter(Boolean);
+      await prefetch(Object.keys(index.files).filter((p) => dirs.some((d) => p.startsWith(d))), "battle", true);
+      const res = JSON.parse(bcuBattleStart(args.colc, args.map, args.stage, args.seed, args.lineup, !!args.auto));
+      if (res.error) return post("battle", res);
       // let the first pictures (background, castles, lineup, enemies) decode before the battle runs
-      for (const t0 = performance.now(); canvas && +bcuDraw(1) > 0 && performance.now() - t0 < 5000;) {
+      for (const t0 = performance.now(); canvas && +bcuDraw(speed) > 0 && performance.now() - t0 < 5000;) {
         await new Promise((ok) => setTimeout(ok, 20));
       }
       post("battle", res);
     } else if (cmd === "battleStep") {
+      speed = args.speed || 0;
       const res = JSON.parse(bcuBattleStep(args.frames));
       draw();
       post("frame", res);
+    } else if (cmd === "input") {
+      if (self.bcuInput) { bcuInput(args.cmd); draw(); }
+    } else if (cmd === "units") {
+      post("units", JSON.parse(bcuUnits("")));
+    } else if (cmd === "icons") {
+      await icons(args.paths, args.cut);
     }
   } catch (e) {
     post("error", (e && e.message) || String(e));

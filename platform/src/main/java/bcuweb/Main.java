@@ -26,7 +26,7 @@ public class Main {
 
     @JSFunctor
     public interface BattleStartFn extends JSObject {
-        String call(String colc, int map, int stage, int seed);
+        String call(String colc, int map, int stage, int seed, String lineup, boolean auto);
     }
 
     @JSFunctor
@@ -50,6 +50,9 @@ public class Main {
             return lang;
         });
         Js.export("bcuBattleStart", (BattleStartFn) BattleSession::start);
+        Js.export("bcuUnits", (StrFn) s -> BattleSession.units());
+        Js.export("bcuBattleFiles", (BattleStartFn) (colc, map, stage, seed, lineup, auto) -> BattleSession.battleFiles(colc, map, stage, lineup));
+        Js.export("bcuInput", (StrFn) Main::input);
         Js.export("bcuBattleStep", (StepFn) BattleSession::step);
         Js.export("bcuAttachCanvas", (ObjFn) c -> {
             BattleView.attach(c);
@@ -57,6 +60,31 @@ public class Main {
         });
         Js.export("bcuDraw", (StepFn) speed -> String.valueOf(BattleView.draw(speed)));
         Js.post("ready", "");
+    }
+
+    /**
+     * Player input on the battle, one command per call: "tap x y long", "pan dx", "zoom factor x",
+     * "act code" (see {@link BattleSession#act}). Coordinates are canvas pixels.
+     */
+    private static String input(String cmd) {
+        String[] p = cmd.split(" ");
+        switch (p[0]) {
+            case "tap":
+                BattleView.tap(Float.parseFloat(p[1]), Float.parseFloat(p[2]), "1".equals(p[3]));
+                break;
+            case "pan":
+                BattleView.pan(Float.parseFloat(p[1]));
+                break;
+            case "zoom":
+                BattleView.zoom(Float.parseFloat(p[1]), Float.parseFloat(p[2]));
+                break;
+            case "act":
+                BattleSession.act(Integer.parseInt(p[1]));
+                break;
+            default:
+                return "unknown";
+        }
+        return "";
     }
 
     /** Builds BCU's virtual file tree from the asset index, then loads the base game (units, enemies, stages...). */

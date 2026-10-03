@@ -51,7 +51,7 @@ public class BattlePainter implements BattleConst {
     private static final int[] canx = new int[] { 0, 0, 0, 64, 64, 0, 0, 0 };
     private static final DecimalFormat df;
     private static final float bar = 8;
-    protected static final int BOTTOM_GAP = 48;
+    public static final int BOTTOM_GAP = 48;
 
     static {
         NumberFormat nf = NumberFormat.getInstance(Locale.US);
@@ -1101,7 +1101,7 @@ public class BattlePainter implements BattleConst {
 
         int getHeight();
 
-        /** 1 = normal speed; >1 faster, <0 slower (as BCU's speed icons). */
+        /** BCU's speed setting for the speed icons: 0 = normal, n > 0 = 2^n times faster, n < 0 = slower. */
         int getSpeed();
     }
 }
