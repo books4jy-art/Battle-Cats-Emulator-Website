@@ -26,8 +26,21 @@ The core runs under TeaVM without changes because:
 - `BcuReflection` keeps reflection data for the core's classes (the battle engine reads ability data by reflection);
 - `BcuTeaVMPlugin`, at build time, rewrites `Field.getInt`/`setBoolean`/... (missing in TeaVM) to `FieldAccess`
   helpers, replaces a short list of desktop-only methods (pack writing, disk saves) with "not available in the
-  browser", and works around a TeaVM reflection bug with abstract classes;
+  browser", works around a TeaVM reflection bug with abstract classes, and points the core's `String.split`
+  and `Class.getMethods` calls at faster equivalents (`bcuweb.shim.Strings`, `bcuweb.shim.Reflect`; same results,
+  but loading the game takes about 6 s instead of 14 s);
 - `TAtomicIntegerArray` and `TInetAddress` supply JDK classes Gson needs.
+
+### Saving and offline
+
+- Every byte range downloaded from the packs is saved in the browser (Cache Storage `bcu-assets-v1`). On each
+  visit the worker gets a disk-backed Blob per saved range, so a saved file is read without the network,
+  even synchronously (FileReaderSync) when the game needs it at once. "Download everything" saves the rest.
+- The start-up data is also saved decrypted in one piece (`bcu-startup-v1`, rebuilt when `index.json`
+  changes), so a return visit starts in about 7 s and downloads nothing.
+- `site/sw.js` (service worker) keeps the site's own files for offline use; it always checks the server first
+  (a cheap "not modified" answer when nothing changed), so new versions show up immediately when online.
+- Returning visitors load the game automatically; "Delete saved game data" clears it all.
 
 Known difference: TeaVM's JavaScript computes Java `float`s in double precision, so tiny rounding
 differences can appear (e.g. a few money points over a long battle). Battles play out the same.

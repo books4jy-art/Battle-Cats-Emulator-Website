@@ -12,6 +12,10 @@ public final class Js {
     @JSBody(params = "path", script = "return bcuReadFile(path);")
     public static native Int8Array readFile(String path);
 
+    /** A game file decoded as UTF-8 text (keeping a byte-order mark, like Java's decoder); null if there's no such file. */
+    @JSBody(params = "path", script = "return bcuReadText(path);")
+    public static native String readText(String path);
+
     /** Bytes of a non-pack file the worker fetched before start (proc.json, name lists, ...); null if missing. */
     @JSBody(params = "name", script = "return bcuReadExtra(name);")
     public static native Int8Array readExtra(String name);

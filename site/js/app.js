@@ -55,6 +55,7 @@ worker.onmessage = (ev) => {
     });
     console.log("loaded", data);
     $("load").querySelector("span").textContent = t("loaded");
+    try { localStorage.setItem("autoload", "1"); } catch (e) { /* storage blocked */ }
     worker.postMessage({ cmd: "stages" });
     worker.postMessage({ cmd: "units" });
   } else if (type === "stages") {
@@ -68,6 +69,16 @@ worker.onmessage = (ev) => {
     $("lineupBox").hidden = false;
     renderLineup();
     if ($("picker").open) renderUnits();
+  } else if (type === "storage") {
+    storage = data;
+    showStorage();
+  } else if (type === "saveAll") {
+    $("saveProgress").hidden = false;
+    $("saveBar").style.width = (data.total ? 100 * data.done / data.total : 100).toFixed(1) + "%";
+    $("saveAll").querySelector("span").textContent = t("saving", (data.done / 1e6).toFixed(0), (data.total / 1e6).toFixed(0));
+  } else if (type === "cleared") {
+    try { localStorage.removeItem("autoload"); } catch (e) { /* storage blocked */ }
+    location.reload();
   } else if (type === "icon") {
     gotIcon(data.path, data.blob);
   } else if (type === "battle") {
@@ -97,12 +108,44 @@ worker.onmessage = (ev) => {
       $("result").className = "result " + (data.result > 0 ? "win" : "lose");
     }
   } else if (type === "error") {
-    showError(data);
+    $("load").disabled = $("load").querySelector("span").textContent === t("loaded");
+    $("run").disabled = false;
+    $("saveAll").disabled = false;
+    showError(/offline/.test(data) || !navigator.onLine ? t("needOnline") : data);
     console.error(data);
   } else if (type === "log") {
     console.log(data);
   }
 };
+
+// ---------------------------------------------------------------- saved data (see js/worker.js and sw.js)
+let storage = null; // {saved, have, total} bytes
+
+function showStorage() {
+  if (!storage) return;
+  const full = storage.have >= storage.total;
+  $("storage").hidden = false;
+  $("storageInfo").textContent = (navigator.onLine ? "" : t("offline") + " ") + t("stSaved", {
+    full, mb: (storage.saved / 1e6).toFixed(0), pct: Math.floor(100 * storage.have / storage.total),
+    rest: Math.max(1, (storage.total - storage.have) / 1e6).toFixed(0),
+  });
+  $("saveAll").hidden = full;
+  $("saveAll").disabled = false;
+  $("saveAll").querySelector("span").textContent = t("saveAll");
+  $("saveProgress").hidden = true;
+}
+
+$("saveAll").onclick = async () => {
+  $("saveAll").disabled = true;
+  try { if (navigator.storage && navigator.storage.persist) await navigator.storage.persist(); } catch (e) { /* not allowed: still saved, the browser may clear it when space runs low */ }
+  worker.postMessage({ cmd: "saveAll" });
+};
+$("clearData").onclick = () => {
+  if (confirm(t("clearAsk"))) worker.postMessage({ cmd: "clear" });
+};
+addEventListener("online", showStorage);
+addEventListener("offline", showStorage);
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => { /* no offline page; everything else works */ });
 
 // ---------------------------------------------------------------- game loop (30 battle frames per second × speed)
 const loop = {
@@ -502,5 +545,8 @@ function refreshTexts() {
   $("full").querySelector("span").textContent = t(arena.classList.contains("full") ? "exitFull" : "full");
   $("overlay").textContent = t("paused");
   if (lastFrame && !running) $("result").textContent = lastFrame.result > 0 ? t("win") : lastFrame.result < 0 ? t("lose") : "";
+  showStorage();
 }
 applyLang();
+// returning visitor: load straight away (the data is saved in the browser)
+try { if (localStorage.getItem("autoload") === "1") $("load").click(); } catch (e) { /* storage blocked */ }

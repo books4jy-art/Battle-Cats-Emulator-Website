@@ -77,6 +77,8 @@ select.input option { background: #10131a; color: var(--fg); }
 }
 .seg2 button[aria-pressed="true"], .seg3 button[aria-pressed="true"] { background: var(--w-10); color: var(--fg); }
 
+.storage .row-btns { margin: 10px 0 0; }
+.storage .progress { margin-top: 10px; }
 .progress { height: 6px; border-radius: 3px; background: var(--w-05); margin-top: 14px; overflow: hidden; }
 .progress .bar { height: 100%; width: 0; background: var(--sky-400); transition: width .2s; }
 

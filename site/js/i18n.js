@@ -43,6 +43,15 @@ const TEXT = {
     win: "Victory! The enemy base was destroyed.",
     lose: "Defeat. The cat base was destroyed.",
     running: "Battle in progress…",
+    saveAll: "Download everything for offline play",
+    saving: (mb, total) => `Downloading… ${mb} / ${total} MB`,
+    clearData: "Delete saved game data",
+    clearAsk: "Delete all game data saved in this browser? It will be downloaded again next time.",
+    stSaved: (s) => s.full
+      ? `All game files are saved in this browser (${s.mb} MB). Works offline.`
+      : `Saved in this browser: ${s.mb} MB (${s.pct}% of the game files). Saved parts work offline; "Download everything" saves the rest (about ${s.rest} MB).`,
+    offline: "You're offline: using the game data saved in this browser.",
+    needOnline: "That needs game files that aren't saved in this browser yet. Connect to the internet (or use \"Download everything\" next time you're online) and try again.",
     noCanvas: "This browser can't draw the battle (no OffscreenCanvas). Please update it, or try a recent Chrome, Edge, Firefox or Safari.",
     timeUp: "Time's up.",
     foot: "Private test build. Battle Cats © PONOS. Battle Cats Ultimate by the BCU team.",
@@ -92,6 +101,15 @@ const TEXT = {
     win: "승리! 적 성을 무너뜨렸어요.",
     lose: "패배. 냥코 성이 무너졌어요.",
     running: "전투 중…",
+    saveAll: "오프라인용으로 전부 받기",
+    saving: (mb, total) => `받는 중… ${mb} / ${total} MB`,
+    clearData: "저장된 게임 데이터 지우기",
+    clearAsk: "이 브라우저에 저장된 게임 데이터를 모두 지울까요? 다음에 다시 받아요.",
+    stSaved: (s) => s.full
+      ? `게임 파일이 모두 이 브라우저에 저장돼 있어요 (${s.mb} MB). 오프라인에서도 돼요.`
+      : `이 브라우저에 저장됨: ${s.mb} MB (게임 파일의 ${s.pct}%). 저장된 부분은 오프라인에서도 돼요. "전부 받기"를 누르면 나머지(약 ${s.rest} MB)도 저장해요.`,
+    offline: "오프라인이에요: 이 브라우저에 저장된 게임 데이터를 써요.",
+    needOnline: "아직 이 브라우저에 저장되지 않은 게임 파일이 필요해요. 인터넷에 연결한 뒤 (또는 온라인일 때 \"전부 받기\"를 눌러 둔 뒤) 다시 해 주세요.",
     noCanvas: "이 브라우저에서는 전투 화면을 그릴 수 없어요 (OffscreenCanvas 미지원). 브라우저를 업데이트하거나 최신 Chrome, Edge, Firefox, Safari를 사용해 주세요.",
     timeUp: "시간이 다 됐어요.",
     foot: "비공개 테스트 버전. 냥코 대전쟁 © PONOS. 배틀 캣츠 얼티밋은 BCU 팀이 만들었어요.",

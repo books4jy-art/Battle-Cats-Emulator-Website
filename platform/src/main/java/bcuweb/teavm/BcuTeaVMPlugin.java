@@ -29,6 +29,10 @@ import java.util.Set;
  * work in a browser and would pull in JDK classes TeaVM doesn't have. Their bodies are replaced with
  * "throw UnsupportedOperationException". The browser version gets game data another way
  * ({@link bcuweb.web.WebFileData}) and never calls them.</li>
+ * <li>Speed (TeaVM's library is slower than the JDK's in a few spots the core leans on at start-up):
+ * String.split calls in the core go to {@link bcuweb.shim.Strings#split}, which has the JDK's fast path
+ * for one-character separators instead of always compiling a regular expression, and Class.getMethods
+ * calls go to {@link bcuweb.shim.Reflect#getMethods}, which remembers the answer per class.</li>
  * <li>TeaVM lists every class with a public no-argument constructor that might reach Class.newInstance,
  * but forgets to leave out abstract classes (which have no create function), breaking the output.
  * Public constructors of abstract classes are made protected; only subclasses can call them anyway.</li>
@@ -37,6 +41,10 @@ import java.util.Set;
 public class BcuTeaVMPlugin implements TeaVMPlugin, ClassHolderTransformer {
     private static final String FIELD = "java.lang.reflect.Field";
     private static final String HELPER = "bcuweb.shim.FieldAccess";
+    /** "class.method" -> static helper class taking the instance as its first argument (speed-ups). */
+    private static final Map<String, String> FASTER = Map.of(
+            "java.lang.String.split", "bcuweb.shim.Strings",
+            "java.lang.Class.getMethods", "bcuweb.shim.Reflect");
 
     /** class -> desktop-only methods (by name) that become "not supported in the browser". */
     private static final Map<String, Set<String>> DESKTOP_ONLY = Map.ofEntries(
@@ -60,9 +68,10 @@ public class BcuTeaVMPlugin implements TeaVMPlugin, ClassHolderTransformer {
 
     @Override
     public void transformClass(ClassHolder cls, ClassHolderTransformerContext context) {
-        if (cls.getName().equals(HELPER)) {
+        if (cls.getName().startsWith("bcuweb.shim.")) {
             return;
         }
+        boolean speedUp = cls.getName().startsWith("common.") || cls.getName().startsWith("bcuweb.");
         Set<String> desktopOnly = DESKTOP_ONLY.getOrDefault(cls.getName(), Set.of());
         boolean abstractCls = cls.hasModifier(ElementModifier.ABSTRACT) && !cls.hasModifier(ElementModifier.INTERFACE);
         for (MethodHolder method : cls.getMethods()) {
@@ -82,16 +91,24 @@ public class BcuTeaVMPlugin implements TeaVMPlugin, ClassHolderTransformer {
             for (BasicBlock block : program.getBasicBlocks()) {
                 for (Instruction insn : block) {
                     if (insn instanceof InvokeInstruction) {
-                        rewrite((InvokeInstruction) insn);
+                        rewrite((InvokeInstruction) insn, speedUp);
                     }
                 }
             }
         }
     }
 
-    private static void rewrite(InvokeInstruction invoke) {
+    private static void rewrite(InvokeInstruction invoke, boolean speedUp) {
         MethodReference m = invoke.getMethod();
-        if (!m.getClassName().equals(FIELD) || invoke.getInstance() == null) {
+        if (invoke.getInstance() == null) {
+            return;
+        }
+        String faster = speedUp ? FASTER.get(m.getClassName() + "." + m.getName()) : null;
+        if (faster != null) {
+            toStatic(invoke, faster);
+            return;
+        }
+        if (!m.getClassName().equals(FIELD)) {
             return;
         }
         String name = m.getName();
@@ -101,9 +118,16 @@ public class BcuTeaVMPlugin implements TeaVMPlugin, ClassHolderTransformer {
             return;
         }
         // Field.getInt(Object) -> FieldAccess.getInt(Field, Object); Field.setInt(Object, int) -> FieldAccess.setInt(Field, Object, int)
+        toStatic(invoke, HELPER);
+    }
+
+    /** obj.method(args) -> helper.method(obj, args), same name, the instance's type added in front. */
+    private static void toStatic(InvokeInstruction invoke, String helper) {
+        MethodReference m = invoke.getMethod();
+        String name = m.getName();
         ValueType[] sig = m.getSignature();
         ValueType[] staticSig = new ValueType[sig.length + 1];
-        staticSig[0] = ValueType.object(FIELD);
+        staticSig[0] = ValueType.object(m.getClassName());
         System.arraycopy(sig, 0, staticSig, 1, sig.length);
         Variable[] args = new Variable[invoke.getArguments().size() + 1];
         args[0] = invoke.getInstance();
@@ -112,7 +136,7 @@ public class BcuTeaVMPlugin implements TeaVMPlugin, ClassHolderTransformer {
         }
         invoke.setInstance(null);
         invoke.setType(InvocationType.SPECIAL);
-        invoke.setMethod(new MethodReference(HELPER, name, staticSig));
+        invoke.setMethod(new MethodReference(helper, name, staticSig));
         invoke.setArguments(args);
     }
 }
