@@ -33,7 +33,7 @@ UPDATE_URL = "https://raw.githubusercontent.com/battlecatsultimate/bcu-page/mast
 ASSET_URL = "https://raw.githubusercontent.com/battlecatsultimate/bcu-assets/master/assets/{id}.asset.bcuzip"
 # Music and sound effects: plain .ogg files numbered 000, 001, ... (BCU's UpdateCheck downloads them the same way)
 MUSIC_URL = "https://raw.githubusercontent.com/battlecatsultimate/bcu-assets/master/music/{id}.ogg"
-CORE_VER = "0.7.19.1"  # AssetLoader.CORE_VER in the pinned bcu-core; packs for newer BCU versions are skipped
+CORE_VER = "0.7.20.0"  # AssetLoader.CORE_VER in the pinned bcu-core; packs for newer BCU versions are skipped
 HEAD = hashlib.md5(b"battlecatsultimate").digest()
 IV = HEAD
 

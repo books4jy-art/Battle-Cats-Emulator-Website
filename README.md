@@ -11,7 +11,7 @@ and runs entirely in the visitor's browser, so the site is plain static files.
 
 | Folder | What |
 |---|---|
-| `bcu-core/` | [BCU_java_util_common](https://github.com/battlecatsultimate/BCU_java_util_common) as a git submodule, **never edited** |
+| `bcu-core/` | [BCU_java_util_common](https://github.com/battlecatsultimate/BCU_java_util_common) as a git submodule, **never edited**. Pinned to the `data_focus` branch (core 0.7.20.0: the released branch plus "cost increase limit" parsing), because BCU's newest asset packs (game version 15.5) need that core version. Battles don't apply the new cost-increase rule yet (BCU itself doesn't either). |
 | `patches/` | Patches applied to a copy of the core at build time (currently none) |
 | `platform/` | Browser platform code: entry point, Canvas drawing (`bcuweb.web`), the battle painter copied from BCU Android (`bcuweb.battle`), TeaVM build plugins, small JDK stand-ins |
 | `tools/build_index.py` | Builds `site/data/index.json`: where each game file sits inside BCU's asset packs |

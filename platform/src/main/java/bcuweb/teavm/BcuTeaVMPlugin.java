@@ -32,7 +32,9 @@ import java.util.Set;
  * <li>Speed (TeaVM's library is slower than the JDK's in a few spots the core leans on at start-up):
  * String.split calls in the core go to {@link bcuweb.shim.Strings#split}, which has the JDK's fast path
  * for one-character separators instead of always compiling a regular expression, and Class.getMethods
- * calls go to {@link bcuweb.shim.Reflect#getMethods}, which remembers the answer per class.</li>
+ * calls go to {@link bcuweb.shim.Reflect#getMethods}, which remembers the answer per class. Likewise the
+ * core's String.format / printf calls go through {@link bcuweb.shim.Strings}, which turns "%n" (unknown to
+ * TeaVM's formatter) into a newline first.</li>
  * <li>TeaVM lists every class with a public no-argument constructor that might reach Class.newInstance,
  * but forgets to leave out abstract classes (which have no create function), breaking the output.
  * Public constructors of abstract classes are made protected; only subclasses can call them anyway.</li>
@@ -44,7 +46,12 @@ public class BcuTeaVMPlugin implements TeaVMPlugin, ClassHolderTransformer {
     /** "class.method" -> static helper class taking the instance as its first argument (speed-ups). */
     private static final Map<String, String> FASTER = Map.of(
             "java.lang.String.split", "bcuweb.shim.Strings",
-            "java.lang.Class.getMethods", "bcuweb.shim.Reflect");
+            "java.lang.Class.getMethods", "bcuweb.shim.Reflect",
+            "java.io.PrintStream.printf", "bcuweb.shim.Strings",
+            "java.io.PrintStream.format", "bcuweb.shim.Strings");
+    /** Static calls pointed at a helper with the same signature (TeaVM's formatter lacks %n). */
+    private static final Map<String, String> STATIC_FIX = Map.of(
+            "java.lang.String.format", "bcuweb.shim.Strings");
 
     /** class -> desktop-only methods (by name) that become "not supported in the browser". */
     private static final Map<String, Set<String>> DESKTOP_ONLY = Map.ofEntries(
@@ -101,6 +108,11 @@ public class BcuTeaVMPlugin implements TeaVMPlugin, ClassHolderTransformer {
     private static void rewrite(InvokeInstruction invoke, boolean speedUp) {
         MethodReference m = invoke.getMethod();
         if (invoke.getInstance() == null) {
+            String helper = speedUp ? STATIC_FIX.get(m.getClassName() + "." + m.getName()) : null;
+            // only String.format(String, Object[]) (not the Locale variant)
+            if (helper != null && m.parameterCount() == 2 && m.parameterType(0).isObject("java.lang.String")) {
+                invoke.setMethod(new MethodReference(helper, m.getName(), m.getSignature()));
+            }
             return;
         }
         String faster = speedUp ? FASTER.get(m.getClassName() + "." + m.getName()) : null;

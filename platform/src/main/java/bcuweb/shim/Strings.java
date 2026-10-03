@@ -13,6 +13,42 @@ public final class Strings {
     private Strings() {
     }
 
+    // ---- %n in format strings: TeaVM's formatter doesn't know it (Java: the line separator), so it becomes "\n".
+    private static String newlines(String fmt) {
+        if (fmt == null || fmt.indexOf("%n") < 0) {
+            return fmt;
+        }
+        StringBuilder sb = new StringBuilder(fmt.length());
+        for (int i = 0; i < fmt.length(); i++) {
+            char c = fmt.charAt(i);
+            if (c == '%' && i + 1 < fmt.length()) {
+                char d = fmt.charAt(i + 1);
+                if (d == 'n') {
+                    sb.append('\n');
+                    i++;
+                    continue;
+                }
+                sb.append(c).append(d); // keeps "%%" (and any other conversion) as it is
+                i++;
+                continue;
+            }
+            sb.append(c);
+        }
+        return sb.toString();
+    }
+
+    public static String format(String fmt, Object... args) {
+        return String.format(newlines(fmt), args);
+    }
+
+    public static java.io.PrintStream printf(java.io.PrintStream out, String fmt, Object... args) {
+        return out.printf(newlines(fmt), args);
+    }
+
+    public static java.io.PrintStream format(java.io.PrintStream out, String fmt, Object... args) {
+        return out.format(newlines(fmt), args);
+    }
+
     public static String[] split(String s, String regex) {
         return split(s, regex, 0);
     }
