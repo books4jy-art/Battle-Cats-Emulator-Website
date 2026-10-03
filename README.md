@@ -42,6 +42,13 @@ The core runs under TeaVM without changes because:
   (a cheap "not modified" answer when nothing changed), so new versions show up immediately when online.
 - Returning visitors load the game automatically; "Delete saved game data" clears it all.
 
+### Info pages
+
+`bcuweb.info.Info` gives cat, enemy and stage data as JSON, worked out like BCU's desktop info tables (same level,
+talent and treasure handling as battles). Ability descriptions come from the core's ProcLang/Formatter (BCU's
+`proc.json` texts, English or Korean); trait and simple-ability names (from BCU Android's strings) are in
+`site/js/i18n.js`. The page side is `site/js/info.js`.
+
 ### Sound
 
 BCU's music and sound effects are plain `.ogg` files in bcu-assets' `music/` folder (`tools/build_index.py`

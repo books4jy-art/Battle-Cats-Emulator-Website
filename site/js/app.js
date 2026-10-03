@@ -67,7 +67,9 @@ worker.onmessage = (ev) => {
     lineup = lineup.map((s) => (s && unitById.has(s.id) && s.form < unitById.get(s.id).f.length ? s : null));
     if (!lineup.some(Boolean)) lineup = defaultLineup();
     $("lineupBox").hidden = false;
+    $("infoBox").hidden = false;
     renderLineup();
+    Info.unitsChanged();
     if ($("picker").open) renderUnits();
   } else if (type === "storage") {
     storage = data;
@@ -79,6 +81,8 @@ worker.onmessage = (ev) => {
   } else if (type === "cleared") {
     try { localStorage.removeItem("autoload"); } catch (e) { /* storage blocked */ }
     location.reload();
+  } else if (type === "info") {
+    Info.onData(data.req, data.data);
   } else if (type === "icon") {
     gotIcon(data.path, data.blob);
   } else if (type === "battle") {
@@ -420,7 +424,10 @@ function askIcon(path) {
   iconAsked.add(path);
   iconBatch.push(path);
   if (iconBatch.length === 1) setTimeout(() => {
-    worker.postMessage({ cmd: "icons", args: { paths: iconBatch, cut: units.uniCut } });
+    // cats' deploy icons are cut out of a larger picture; enemy pictures are used whole
+    const whole = iconBatch.filter((p) => p.includes("/enemy/")), cut = iconBatch.filter((p) => !p.includes("/enemy/"));
+    if (cut.length) worker.postMessage({ cmd: "icons", args: { paths: cut, cut: units.uniCut } });
+    if (whole.length) worker.postMessage({ cmd: "icons", args: { paths: whole, cut: null } });
     iconBatch = [];
   }, 30);
 }
@@ -469,7 +476,9 @@ function renderPicked() {
   if (u.maxp > 0) box.append(num(t("plus"), plus, u.maxp, "plus"));
   const rm = Object.assign(document.createElement("button"), { type: "button", className: "tool", textContent: t("remove") });
   rm.onclick = () => { lineup[pickSlot] = null; saveLineup(); renderLineup(); $("picker").close(); };
-  box.append(rm);
+  const info = Object.assign(document.createElement("button"), { type: "button", className: "tool", textContent: t("infoBtn") });
+  info.onclick = () => { $("picker").close(); const { lv, plus } = levelOf(s); Info.showCat(s.id, s.form, lv, plus); };
+  box.append(info, rm);
 }
 
 function renderUnits() {
@@ -518,8 +527,10 @@ $("load").onclick = () => {
   $("error").hidden = true;
   worker.postMessage({ cmd: "load", args: { lang: LANG } });
 };
-$("colc").onchange = onColc;
-$("map").onchange = onMap;
+$("colc").onchange = () => { onColc(); Info.stageChanged(); };
+$("map").onchange = () => { onMap(); Info.stageChanged(); };
+$("stage").onchange = () => Info.stageChanged();
+$("stageInfo").onclick = () => Info.showStage();
 $("run").onclick = () => {
   if (!lineup.some(Boolean)) return showError(t("emptyLineup"));
   $("run").disabled = true;
@@ -578,6 +589,7 @@ function refreshTexts() {
   $("full").querySelector("span").textContent = t(arena.classList.contains("full") ? "exitFull" : "full");
   $("overlay").textContent = t("paused");
   showSoundButtons();
+  Info.refresh();
   if (lastFrame && !running) $("result").textContent = lastFrame.result > 0 ? t("win") : lastFrame.result < 0 ? t("lose") : "";
   showStorage();
 }

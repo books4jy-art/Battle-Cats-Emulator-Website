@@ -443,13 +443,13 @@ function draw() {
 /** Lineup icons for the page: downloads the cats' deploy-icon files (cached) and cuts out the icon. */
 async function icons(paths, cut) {
   await prefetch(paths.filter((p) => index.files[p]), "icons", true);
-  const [x, y, w, h] = cut;
   for (const path of paths) {
     let blob = null;
     try {
       const bytes = files.get(path);
       if (bytes) {
         const bmp = await createImageBitmap(new Blob([bytes], { type: "image/png" }));
+        const [x, y, w, h] = cut || [0, 0, bmp.width, bmp.height]; // no cut: the whole picture
         const c = new OffscreenCanvas(w, h);
         c.getContext("2d").drawImage(bmp, x, y, w, h, 0, 0, w, h);
         bmp.close();
@@ -528,6 +528,8 @@ self.onmessage = async (ev) => {
       if (self.bcuInput) { bcuInput(args.cmd); draw(); }
     } else if (cmd === "units") {
       post("units", JSON.parse(bcuUnits("")));
+    } else if (cmd === "info") {
+      post("info", { req: args.req, data: JSON.parse(bcuInfo(args.req)) });
     } else if (cmd === "icons") {
       await icons(args.paths, args.cut);
     }

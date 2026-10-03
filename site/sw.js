@@ -5,7 +5,7 @@
 "use strict";
 
 const SHELL = "bcu-shell-v1";
-const FILES = ["./", "css/style.css", "js/i18n.js", "js/audio.js", "js/app.js", "js/worker.js", "js/aes.js", "teavm/js/bcu.js", "data/index.json"];
+const FILES = ["./", "css/style.css", "js/i18n.js", "js/audio.js", "js/app.js", "js/info.js", "js/worker.js", "js/aes.js", "teavm/js/bcu.js", "data/index.json"];
 const DEV_RELAYS = /^\/bcu-(assets|extra|lang|music)\//; // tools/dev_server.py (the worker saves those)
 
 self.addEventListener("install", (ev) => {

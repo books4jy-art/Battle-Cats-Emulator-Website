@@ -62,6 +62,7 @@
         </div>
         <div class="row-btns">
           <button class="btn btn-primary" id="run" type="button" data-t="run">Start battle</button>
+          <button class="tool" id="stageInfo" type="button" data-t="stageInfo">Stage info</button>
           <label class="check"><input type="checkbox" id="auto"> <span data-t="auto">Auto-deploy the front row</span></label>
         </div>
 
@@ -97,6 +98,29 @@
         <p class="result" id="result"></p>
       </div>
 
+      <div id="infoBox" hidden>
+        <p class="section-title" data-t="infoTitle">4 · Info</p>
+        <div class="seg3 tabs" role="tablist">
+          <button type="button" role="tab" data-tab="cats" aria-pressed="true" data-t="tabCats">Cats</button>
+          <button type="button" role="tab" data-tab="enemies" aria-pressed="false" data-t="tabEnemies">Enemies</button>
+          <button type="button" role="tab" data-tab="stage" aria-pressed="false" data-t="tabStage">Stage</button>
+        </div>
+        <div class="tab" id="tab-cats">
+          <input class="input" id="catSearch" type="search" autocomplete="off">
+          <div class="pick-list" id="catList"></div>
+          <div class="info-card" id="catCard" hidden></div>
+        </div>
+        <div class="tab" id="tab-enemies" hidden>
+          <input class="input" id="enemySearch" type="search" autocomplete="off">
+          <div class="pick-list" id="enemyList"></div>
+          <div class="info-card" id="enemyCard" hidden></div>
+        </div>
+        <div class="tab" id="tab-stage" hidden>
+          <p class="hint" data-t="stageHint">The stage chosen in "Battle" above.</p>
+          <div class="info-card" id="stageCard"></div>
+        </div>
+      </div>
+
       <div class="alert-error" id="error" hidden></div>
     </div>
     <p class="hint foot" data-t="foot">Private test build. Battle Cats © PONOS. Battle Cats Ultimate by the BCU team.</p>
@@ -118,5 +142,6 @@
 <script src="js/i18n.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/app.js"></script>
+<script src="js/info.js"></script>
 </body>
 </html>

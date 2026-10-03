@@ -1,6 +1,7 @@
 package bcuweb;
 
 import bcuweb.battle.BattleView;
+import bcuweb.info.Info;
 import bcuweb.web.Js;
 import bcuweb.web.WebContext;
 import bcuweb.web.WebFileData;
@@ -53,6 +54,7 @@ public class Main {
         Js.export("bcuUnits", (StrFn) s -> BattleSession.units());
         Js.export("bcuBattleFiles", (BattleStartFn) (colc, map, stage, seed, lineup, auto) -> BattleSession.battleFiles(colc, map, stage, lineup));
         Js.export("bcuInput", (StrFn) Main::input);
+        Js.export("bcuInfo", (StrFn) Main::info);
         Js.export("bcuBattleStep", (StepFn) BattleSession::step);
         Js.export("bcuAttachCanvas", (ObjFn) c -> {
             BattleView.attach(c);
@@ -85,6 +87,23 @@ public class Main {
                 return "unknown";
         }
         return "";
+    }
+
+    /** Info pages: "unit id form lv plus", "enemy id hp% atk%", "stage colc map stage", "enemies". */
+    private static String info(String cmd) {
+        String[] p = cmd.split(" ");
+        switch (p[0]) {
+            case "unit":
+                return Info.unit(Integer.parseInt(p[1]), Integer.parseInt(p[2]), Integer.parseInt(p[3]), Integer.parseInt(p[4]));
+            case "enemy":
+                return Info.enemy(Integer.parseInt(p[1]), Integer.parseInt(p[2]), Integer.parseInt(p[3]));
+            case "stage":
+                return Info.stage(p[1], Integer.parseInt(p[2]), Integer.parseInt(p[3]));
+            case "enemies":
+                return Info.enemies();
+            default:
+                return "{\"error\":\"unknown\"}";
+        }
     }
 
     /** Builds BCU's virtual file tree from the asset index, then loads the base game (units, enemies, stages...). */
