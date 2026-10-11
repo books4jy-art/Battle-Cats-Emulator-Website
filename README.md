@@ -88,3 +88,25 @@ cd bcu-core && git pull origin master && cd ..
 git add bcu-core && git commit -m "Update BCU core"
 ```
 Then rebuild. If a patch in `patches/` no longer applies, the build stops and says which one.
+
+## Roadmap
+
+Next steps, in order (M7, custom packs, comes last):
+
+- **M8 Battle setup:** treasures and base upgrades, talents, orbs, cannon and castle parts, battle items,
+  combo display, saved lineups (crowns are done).
+- **M9 Battle extras:** more speeds, results screen, statistics, scoring.
+- **M10 Replays.**
+- **M11 Info extras:** filters, stage search, compare, descriptions, combo list.
+- **M12 Viewers:** animation viewer, music player.
+- **M13 Settings:** languages, display options, key bindings, level rules.
+- **M14 Editors.**
+- **M7 Custom packs.**
+
+### Later
+
+- **Korean enemy bases (castles).** The site uses the Korean game's stage files (`site/data/kr`), so
+  backgrounds match the Korean game, but the enemy-base pictures are still BCU's Japanese ones. The Korean
+  pictures aren't in the Korean app (the game downloads them from Ponos's server after installing), and no
+  open-source copy was found (searched October 2026). They could be added through `tools/kr_overlay.py`
+  from a Korean phone's downloaded game files, or from an open-source source if one appears.
