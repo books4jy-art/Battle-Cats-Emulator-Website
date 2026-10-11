@@ -103,10 +103,8 @@ Next steps, in order (M7, custom packs, comes last):
 - **M14 Editors.**
 - **M7 Custom packs.**
 
-### Later
+### Korean data
 
-- **Korean enemy bases (castles).** The site uses the Korean game's stage files (`site/data/kr`), so
-  backgrounds match the Korean game, but the enemy-base pictures are still BCU's Japanese ones. The Korean
-  pictures aren't in the Korean app (the game downloads them from Ponos's server after installing), and no
-  open-source copy was found (searched October 2026). They could be added through `tools/kr_overlay.py`
-  from a Korean phone's downloaded game files, or from an open-source source if one appears.
+The site uses the Korean game's versions of files that differ from BCU's Japanese ones (`site/data/kr`,
+made by `tools/kr_overlay.py`): stage files (so backgrounds match the Korean game) and the Empire of Cats
+enemy bases (`--castles`, from the Korean server packs in github.com/fieryhenry/BCData, `kr_server/`).
