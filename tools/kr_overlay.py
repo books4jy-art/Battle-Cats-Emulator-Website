@@ -14,6 +14,12 @@ Only BCU files under --prefix are compared (default: stage data). Needs a built 
 DIR holds the Korean Empire of Cats enemy bases, ecNNN_ko.png, from the Korean game's server-downloaded
 ImageServer pack (public copy: github.com/fieryhenry/BCData, kr_server/; server packs are AES-ECB with the
 key md5("battlecats")[:8] in hex). They replace BCU's (Japanese) ./org/img/ec/ecNNN.png.
+
+       python tools/kr_overlay.py --images DIR
+DIR holds pictures with BCU's names (rcNNN.png, scNNN.png, wcNNN.png, bgNNN.png) from the same Korean
+server packs. Each one that differs from BCU's picture of the same name and size (mostly Korean text on
+event bases and backgrounds) is used instead (./org/img/rc/, sc/, wc/, bg/). Pictures of another size are
+skipped: BCU cuts them up with its own layout data (bg*.imgcut), which wouldn't fit. Needs Pillow.
 """
 from __future__ import annotations
 
@@ -70,10 +76,34 @@ def castles(src: str, index: dict) -> None:
     print(f"{len(entries)} Korean enemy bases -> {OUT}")
 
 
+def images(src: str, index: dict) -> None:
+    import io
+
+    from PIL import Image, ImageChops
+
+    entries, skipped = {}, []
+    for name in sorted(os.listdir(src)):
+        m = re.fullmatch(r"(rc|sc|wc|bg)\d+\.png", name)
+        path = f"./org/img/{m.group(1)}/{name}" if m else None
+        if path not in index["files"]:
+            continue
+        with open(os.path.join(src, name), "rb") as fh:
+            data = fh.read()
+        ours, theirs = Image.open(io.BytesIO(data)).convert("RGBA"), Image.open(io.BytesIO(bcu_file(index, path))).convert("RGBA")
+        if ours.size != theirs.size:
+            skipped.append(name)
+        elif ImageChops.difference(ours, theirs).getbbox() is not None:
+            entries[path] = data
+    for prefix in ("./org/img/rc/", "./org/img/sc/", "./org/img/wc/", "./org/img/bg/"):
+        add_listing({p: d for p, d in entries.items() if p.startswith(prefix)}, prefix)
+    print(f"{len(entries)} Korean pictures -> {OUT}; skipped (other size): {', '.join(skipped) or 'none'}")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("kr_dir", nargs="?")
     ap.add_argument("--castles", metavar="DIR")
+    ap.add_argument("--images", metavar="DIR")
     ap.add_argument("--prefix", default="./org/stage/")
     ap.add_argument("--index", default=os.path.join(ROOT, "site", "data", "index.json"))
     args = ap.parse_args()
@@ -81,6 +111,9 @@ def main() -> None:
         index = json.load(fh)
     if args.castles:
         castles(args.castles, index)
+        return
+    if args.images:
+        images(args.images, index)
         return
     kr = {name: os.path.join(args.kr_dir, name) for name in os.listdir(args.kr_dir)}
     paths = [p for p in index["files"] if p.startswith(args.prefix) and p.rsplit("/", 1)[1] in kr]

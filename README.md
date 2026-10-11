@@ -107,4 +107,6 @@ Next steps, in order (M7, custom packs, comes last):
 
 The site uses the Korean game's versions of files that differ from BCU's Japanese ones (`site/data/kr`,
 made by `tools/kr_overlay.py`): stage files (so backgrounds match the Korean game) and the Empire of Cats
-enemy bases (`--castles`, from the Korean server packs in github.com/fieryhenry/BCData, `kr_server/`).
+enemy bases (`--castles`) and other enemy bases and backgrounds whose Korean picture differs, mostly
+Korean text instead of Japanese (`--images`; pictures laid out differently are left as BCU's), all from the
+Korean server packs in github.com/fieryhenry/BCData (`kr_server/`).
