@@ -139,11 +139,17 @@ public class BattlePainter implements BattleConst {
         calculateSiz(w, h);
 
         if (prew != w || preh != h) {
+            // the spot in the middle of the view, in stage units (none before the first frame)
+            float center = prew > 0 && bf.sb.siz > 0 ? (prew / 2f - bf.sb.pos) / bf.sb.siz : Float.NaN;
             clear();
             prew = w;
             preh = h;
             bf.sb.siz = preSiz;
-            bf.sb.pos = prePos;
+            regulate(); // (settles the zoom for this size first)
+            // Web: start at the cat base (the right end), like the game, instead of the stage's left edge,
+            // which on a narrow phone screen put the enemy base in the middle; after a resize (rotating,
+            // full screen) keep the same spot in the middle
+            bf.sb.pos = Float.isNaN(center) ? Integer.MIN_VALUE / 2 : (int) (w / 2f - center * bf.sb.siz);
         }
 
         regulate();
