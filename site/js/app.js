@@ -466,7 +466,7 @@ function renderLineup() {
 /** The lineup for the worker (see BattleSession.start). */
 function lineupText() {
   return lineup.map((s) => {
-    if (!s) return "-";
+    if (!s || !unitById.has(s.id)) return "-";
     const { lv, plus } = levelOf(s);
     return Setup.slotText(s, lv, plus);
   }).join(",");
@@ -613,6 +613,7 @@ $("stage").onchange = () => Info.stageChanged();
 $("star").onchange = () => { fillStages(true); Info.stageChanged(); };
 $("stageInfo").onclick = () => Info.showStage();
 $("run").onclick = () => {
+  if (!units) return; // (the cat list arrives just after the stages)
   if (!lineup.some(Boolean)) return showError(t("emptyLineup"));
   $("run").disabled = true;
   $("error").hidden = true;

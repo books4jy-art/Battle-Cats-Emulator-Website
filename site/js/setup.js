@@ -159,7 +159,10 @@ const Setup = (() => {
       // super talents unlock at level 60 (as in the game)
       tal = talentsOf(s, u).map((v, i) => (u.t[i][2] && lv + plus < 60 ? 0 : v)).join(".");
     }
-    if (u && s.form >= 2 && u.o && s.orbs) orbs = Array.from({ length: u.o }, (x, i) => (s.orbs[i] ? s.orbs[i].join(".") : "")).join("/");
+    if (u && s.form >= 2 && u.o && s.orbs) {
+      // (an orb slot that needs a higher level stays empty, as in the game)
+      orbs = Array.from({ length: u.o }, (x, i) => (s.orbs[i] && lv + plus >= (u.ol?.[i] || 0) ? s.orbs[i].join(".") : "")).join("/");
+    }
     return `${s.id}:${s.form}:${lv}:${plus}:${tal}:${orbs}`;
   }
 
@@ -210,6 +213,7 @@ const Setup = (() => {
           for (const [id] of info.orbs) type.append(el("option", { value: id, textContent: t("orbNames")[id] || `#${id}` }));
           type.value = cur ? cur[0] : -1;
           const row = el("div", { className: "orb" }, el("span", { className: "label", textContent: t("orbSlot", j + 1) }), type);
+          if (u.ol?.[j]) row.append(el("small", { className: "need", textContent: t("orbNeeds", u.ol[j]) }));
           const setOrb = (o) => {
             s.orbs = Array.from({ length: u.o }, (x, k) => (k === j ? o : s.orbs?.[k] || null));
             onChange();

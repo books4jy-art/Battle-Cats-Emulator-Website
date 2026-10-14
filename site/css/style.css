@@ -256,3 +256,4 @@ canvas#field {
 .saved { margin-top: 14px; display: flex; flex-wrap: wrap; align-items: end; gap: 10px; }
 .saved .field { display: block; min-width: 200px; flex: 1; max-width: 320px; }
 .saved .row-btns.tight { margin: 0; }
+.orb .need { color: #fde68a; font-size: 11px; order: 9; }

@@ -285,7 +285,12 @@ public final class BattleSession {
                 sb.append(']');
             }
             if (!u.orbs.isEmpty()) {
-                sb.append(",\"o\":").append(u.orbs.size());
+                // orb slots, and the level (level + plus) each one needs (some need 60, as in the game)
+                sb.append(",\"o\":").append(u.orbs.size()).append(",\"ol\":[");
+                for (int i = 0; i < u.orbs.size(); i++) {
+                    sb.append(i == 0 ? "" : ",").append(u.orbs.get(i).minLv);
+                }
+                sb.append(']');
             }
             sb.append(",\"i\":[");
             for (int i = 0; i < u.forms.length; i++) {
