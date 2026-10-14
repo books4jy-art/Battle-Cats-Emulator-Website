@@ -160,7 +160,8 @@ def main() -> None:
 
     out = {
         "core_ver": CORE_VER,
-        "built": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        # fingerprint of the pack data: browsers keep their saved start-up data (js/worker.js) until it changes
+        "built": hashlib.sha256(json.dumps([zip_list, files], sort_keys=True).encode()).hexdigest()[:16],
         "asset_url": ASSET_URL,
         "zips": zip_list,  # [asset id, key hex, base offset]
         "files": files,  # path -> [zip index, offset from base, size]

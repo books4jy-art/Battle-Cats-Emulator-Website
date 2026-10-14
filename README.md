@@ -36,8 +36,8 @@ The core runs under TeaVM without changes because:
 - Every byte range downloaded from the packs is saved in the browser (Cache Storage `bcu-assets-v1`). On each
   visit the worker gets a disk-backed Blob per saved range, so a saved file is read without the network,
   even synchronously (FileReaderSync) when the game needs it at once. "Download everything" saves the rest.
-- The start-up data is also saved decrypted in one piece (`bcu-startup-v1`, rebuilt when `index.json`
-  changes), so a return visit starts in about 7 s and downloads nothing.
+- The start-up data is also saved decrypted in one piece (`bcu-startup-v1`, rebuilt when the game data changes:
+  `index.json`'s "built" is a fingerprint of the pack data, so a deploy without new game data keeps it), so a return visit starts in about 7 s and downloads nothing.
 - `site/sw.js` (service worker) keeps the site's own files for offline use; it always checks the server first
   (a cheap "not modified" answer when nothing changed), so new versions show up immediately when online.
 - Returning visitors load the game automatically; "Delete saved game data" clears it all.

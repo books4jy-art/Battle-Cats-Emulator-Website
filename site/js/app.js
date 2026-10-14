@@ -672,5 +672,8 @@ function refreshTexts() {
   showStorage();
 }
 applyLang();
-// returning visitor: load straight away (the data is saved in the browser)
-try { if (localStorage.getItem("autoload") === "1") $("load").click(); } catch (e) { /* storage blocked */ }
+// returning visitor: load straight away (the data is saved in the browser); once all the page's scripts have
+// run (the load uses js/setup.js, which comes after this file)
+addEventListener("DOMContentLoaded", () => {
+  try { if (localStorage.getItem("autoload") === "1") $("load").click(); } catch (e) { /* storage blocked */ }
+});
