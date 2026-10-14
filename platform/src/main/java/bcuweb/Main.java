@@ -52,6 +52,9 @@ public class Main {
         });
         Js.export("bcuBattleStart", (BattleStartFn) BattleSession::start);
         Js.export("bcuUnits", (StrFn) s -> BattleSession.units());
+        Js.export("bcuSetup", (StrFn) Setup::apply);
+        Js.export("bcuSetupInfo", (StrFn) s -> Setup.info());
+        Js.export("bcuCombos", (StrFn) BattleSession::combos);
         Js.export("bcuBattleFiles", (BattleStartFn) (colc, map, stage, seed, lineup, auto) -> BattleSession.battleFiles(colc, map, stage, lineup));
         Js.export("bcuInput", (StrFn) Main::input);
         Js.export("bcuInfo", (StrFn) Main::info);

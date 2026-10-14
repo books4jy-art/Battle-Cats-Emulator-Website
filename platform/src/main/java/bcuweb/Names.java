@@ -9,6 +9,7 @@ import common.util.stage.MapColc;
 import common.util.stage.MapColc.DefMapColc;
 import common.util.stage.Stage;
 import common.util.stage.StageMap;
+import common.util.unit.Combo;
 import common.util.unit.Enemy;
 import common.util.unit.Unit;
 import java.nio.charset.StandardCharsets;
@@ -31,6 +32,7 @@ public final class Names {
             stageNames(locale, read(l[0] + "-StageName.txt"));
             unitNames(locale, read(l[0] + "-UnitName.txt"));
             enemyNames(locale, read(l[0] + "-EnemyName.txt"));
+            comboNames(locale, read(l[0] + "-ComboName.txt"));
         }
     }
 
@@ -111,6 +113,23 @@ public final class Names {
             Enemy e = UserProfile.getBCData().enemies.get(id);
             if (e != null && e.id.id == id) {
                 MultiLangCont.getStatic().ENAME.put(locale, e, strs[1].trim());
+            }
+        }
+    }
+
+    /** Lines "combo number<TAB>name": the game's combo number, first column of NyancomboData.csv (BCU keeps it as Combo.name). */
+    private static void comboNames(Locale locale, String[] lines) {
+        java.util.Map<Integer, Combo> byId = new java.util.HashMap<>();
+        for (Combo c : UserProfile.getBCData().combos) {
+            if (c.name != null && c.name.matches("\\d+")) {
+                byId.put(Integer.parseInt(c.name), c);
+            }
+        }
+        for (String line : lines) {
+            String[] strs = line.trim().split("\t");
+            Combo c = strs.length < 2 ? null : byId.get(CommonStatic.parseIntN(strs[0]));
+            if (c != null) {
+                MultiLangCont.getStatic().COMNAME.put(locale, c, strs[1].trim());
             }
         }
     }

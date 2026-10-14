@@ -67,6 +67,7 @@ worker.onmessage = (ev) => {
     lineup = lineup.map((s) => (s && unitById.has(s.id) && s.form < unitById.get(s.id).f.length ? s : null));
     if (!lineup.some(Boolean)) lineup = defaultLineup();
     $("lineupBox").hidden = false;
+    Setup.renderSaved();
     $("infoBox").hidden = false;
     renderLineup();
     Info.unitsChanged();
@@ -81,6 +82,12 @@ worker.onmessage = (ev) => {
   } else if (type === "cleared") {
     try { localStorage.removeItem("autoload"); } catch (e) { /* storage blocked */ }
     location.reload();
+  } else if (type === "setupInfo") {
+    Setup.onInfo(data);
+  } else if (type === "setupDone") {
+    Info.refresh();
+  } else if (type === "combos") {
+    Setup.onCombos(data);
   } else if (type === "info") {
     Info.onData(data.req, data.data);
   } else if (type === "icon") {
@@ -104,6 +111,7 @@ worker.onmessage = (ev) => {
     Sound.prepare([data.mus1, 8, 9]);
     loop.start();
   } else if (type === "frame") {
+    if (!running) return; // (a step of the previous battle, answered after "Restart")
     lastFrame = data;
     row = data.row;
     loop.waiting = false;
@@ -452,6 +460,16 @@ function renderLineup() {
     b.onclick = () => openPicker(i);
     box.appendChild(b);
   });
+  Setup.askCombos(lineupText());
+}
+
+/** The lineup for the worker (see BattleSession.start). */
+function lineupText() {
+  return lineup.map((s) => {
+    if (!s) return "-";
+    const { lv, plus } = levelOf(s);
+    return Setup.slotText(s, lv, plus);
+  }).join(",");
 }
 
 // ---- icons: fetched by the worker (and kept in the browser's cache) the first time they're on screen
@@ -540,6 +558,8 @@ function renderPicked() {
   const info = Object.assign(document.createElement("button"), { type: "button", className: "tool", textContent: t("infoBtn") });
   info.onclick = () => { $("picker").close(); const { lv, plus } = levelOf(s); Info.showCat(s.id, s.form, lv, plus); };
   box.append(info, rm);
+  const extra = Setup.slotEditor(s, () => { saveLineup(); renderLineup(); });
+  if (extra) box.append(extra);
 }
 
 function renderUnits() {
@@ -565,7 +585,7 @@ function renderUnits() {
       b.append(iconEl(u.i[fi]), textEl("", name || `#${u.id}`));
       b.onclick = () => {
         const old = lineup[pickSlot];
-        lineup[pickSlot] = { id: u.id, form: fi, ...(old && old.id === u.id ? { lv: old.lv, plus: old.plus } : {}) };
+        lineup[pickSlot] = { id: u.id, form: fi, ...(old && old.id === u.id ? { lv: old.lv, plus: old.plus, tal: old.tal, orbs: old.orbs } : {}) };
         saveLineup(); renderLineup();
         $("picker").close();
       };
@@ -584,6 +604,7 @@ $("load").onclick = () => {
   $("load").disabled = true;
   $("load").querySelector("span").textContent = t("loading");
   $("error").hidden = true;
+  Setup.send();
   worker.postMessage({ cmd: "load", args: { lang: LANG } });
 };
 $("colc").onchange = () => { onColc(); Info.stageChanged(); };
@@ -600,15 +621,10 @@ $("run").onclick = () => {
   Sound.stopMusic();
   // (needs this click: browsers start sound only after the player taps or clicks something)
   Sound.prepare([]);
-  const slots = lineup.map((s) => {
-    if (!s) return "-";
-    const { lv, plus } = levelOf(s);
-    return `${s.id}:${s.form}:${lv}:${plus}`;
-  });
   worker.postMessage({ cmd: "setStar", args: { star: +$("star").value || 0 } });
   worker.postMessage({ cmd: "battleStart", args: {
     colc: stages[$("colc").value].id, map: +$("map").value, stage: +$("stage").value,
-    seed: SEED ?? ((Math.random() * 2 ** 31) | 0), lineup: slots.join(","), auto: $("auto").checked,
+    seed: SEED ?? ((Math.random() * 2 ** 31) | 0), lineup: lineupText(), auto: $("auto").checked,
   } });
 };
 $("pause").onclick = () => setPaused(!paused);
@@ -651,6 +667,7 @@ function refreshTexts() {
   $("overlay").textContent = t("paused");
   showSoundButtons();
   Info.refresh();
+  Setup.refresh();
   if (lastFrame && !running) $("result").textContent = lastFrame.result > 0 ? t("win") : lastFrame.result < 0 ? t("lose") : "";
   showStorage();
 }

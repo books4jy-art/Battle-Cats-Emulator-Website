@@ -51,10 +51,19 @@
         <p class="section-title" data-t="lineupTitle">2 · Lineup</p>
         <div class="lineup" id="lineup"></div>
         <p class="hint" data-t="lineupHint">Tap a slot to choose a cat, its form and level. The second row is optional (swipe up/down in battle to switch rows).</p>
+        <p class="label combos-title" data-t="combos">Combos</p>
+        <div class="combos" id="combos"></div>
+        <div class="saved" id="saved"></div>
+      </div>
+
+      <div id="setupBox" hidden>
+        <p class="section-title" data-t="setupTitle">3 · Battle setup</p>
+        <div class="setup" id="setup"></div>
+        <p class="hint" data-t="setupHint"></p>
       </div>
 
       <div id="battleBox" hidden>
-        <p class="section-title" data-t="battleTitle">3 · Battle</p>
+        <p class="section-title" data-t="battleTitle">4 · Battle</p>
         <div class="row3">
           <label class="field"><span class="label" data-t="colc">Collection</span><select class="input" id="colc"></select></label>
           <label class="field"><span class="label" data-t="map">Map</span><select class="input" id="map"></select></label>
@@ -100,7 +109,7 @@
       </div>
 
       <div id="infoBox" hidden>
-        <p class="section-title" data-t="infoTitle">4 · Info</p>
+        <p class="section-title" data-t="infoTitle">5 · Info</p>
         <div class="seg3 tabs" role="tablist">
           <button type="button" role="tab" data-tab="cats" aria-pressed="true" data-t="tabCats">Cats</button>
           <button type="button" role="tab" data-tab="enemies" aria-pressed="false" data-t="tabEnemies">Enemies</button>
@@ -143,6 +152,7 @@
 <script src="js/i18n.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/app.js"></script>
+<script src="js/setup.js"></script>
 <script src="js/info.js"></script>
 </body>
 </html>

@@ -119,7 +119,11 @@ public final class BattleSession {
 
     /**
      * Starts a battle. lineup: up to 10 comma-separated slots (first row, then second row), each
-     * "unitId:form:level:plusLevel" (levels optional: BCU's defaults), or "-" for an empty slot. auto: deploy the front row automatically.
+     * "unitId:form:level:plusLevel:talents:orbs" or "-" for an empty slot. Everything after the form is optional
+     * (BCU's default levels, all talents at maximum, no orbs). talents: talent levels separated by ".";
+     * orbs: one "type.trait.grade" per orb slot, separated by "/" ("" = no orb). Each row is packed to the left
+     * (as in the game: BCU's combos and controls expect no gaps). auto: deploy the front row automatically.
+     * Treasures, castle parts and items come from {@link Setup}.
      */
     public static String start(String colc, int map, int stage, int seed, String lineup, boolean auto) {
         MapColc mc = null;
@@ -134,33 +138,11 @@ public final class BattleSession {
         Stage st = mc.maps.get(map).list.get(stage);
         BasisSet set = BasisSet.current();
         BasisLU lu = set.sele;
-        String[] slots = lineup.split(",");
-        int placed = 0;
-        for (int i = 0; i < 10; i++) {
-            Form f = null;
-            String[] p = i < slots.length ? slots[i].trim().split(":") : new String[0];
-            if (p.length >= 2) {
-                Unit u = UserProfile.getBCData().units.get(parse(p[0], -1));
-                int form = parse(p[1], 0);
-                if (u != null && form >= 0 && form < u.forms.length) {
-                    f = u.forms[form];
-                    Level lv = u.getPrefLvs(); // BCU's default levels (and all talents), used where none is given
-                    if (p.length > 2) {
-                        lv.setLevel(Math.max(1, Math.min(parse(p[2], lv.getLv()), u.max)));
-                    }
-                    if (p.length > 3) {
-                        lv.setPlusLevel(Math.max(0, Math.min(parse(p[3], lv.getPlusLv()), u.maxp)));
-                    }
-                    lu.lu.setLv(u, lv);
-                    placed++;
-                }
-            }
-            lu.lu.fs[i / 5][i % 5] = f;
-        }
+        int placed = fill(lu, lineup);
         if (placed == 0) {
             return "{\"error\":\"empty lineup\"}";
         }
-        lu.lu.renew();
+        System.arraycopy(Setup.nyc, 0, lu.nyc, 0, 3);
         // deploy on press (BCU's optional "button delay" selects first and deploys a few frames later)
         CommonStatic.getConfig().buttonDelay = false;
         // one lineup row on screen with a switch button (as in the game), and no hitbox/reference lines
@@ -168,12 +150,81 @@ public final class BattleSession {
         CommonStatic.getConfig().ref = false;
         autoMode = auto;
         int crown = Math.min(star, Math.max(0, st.getCont().stars.length - 1));
-        battle = new SBCtrl(auto ? AUTO : NONE, st, crown, lu.copy(), new int[1], seed); // ints[0]: bit 1 = max worker, bit 2 = sniper
+        battle = new SBCtrl(auto ? AUTO : NONE, st, crown, lu.copy(), new int[] { Setup.items }, seed); // ints[0]: bit 1 = max worker, bit 2 = sniper
         sounds.clear();
         // music: mus0 from the start, mus1 once the enemy base's health drops below mush percent (as BCU's apps)
         return "{\"stage\":" + q(st.toString()) + ",\"len\":" + st.len
                 + ",\"mus0\":" + musicId(st.mus0) + ",\"loop0\":" + musicLoop(st.mus0)
                 + ",\"mus1\":" + musicId(st.mus1) + ",\"loop1\":" + musicLoop(st.mus1) + ",\"mush\":" + st.mush + "}";
+    }
+
+    /** Puts a lineup (see {@link #start}) into a BasisLU, each row packed to the left; returns the number of cats. */
+    private static int fill(BasisLU lu, String lineup) {
+        String[] slots = lineup.split(",");
+        int placed = 0;
+        lu.lu.map.clear(); // (levels, talents and orbs of earlier battles)
+        int[] used = new int[2];
+        for (int r = 0; r < 2; r++) {
+            for (int c = 0; c < 5; c++) {
+                lu.lu.fs[r][c] = null;
+            }
+        }
+        for (int i = 0; i < 10; i++) {
+            String[] p = i < slots.length ? slots[i].trim().split(":", -1) : new String[0];
+            if (p.length < 2) {
+                continue;
+            }
+            Unit u = UserProfile.getBCData().units.get(parse(p[0], -1));
+            int form = parse(p[1], 0);
+            if (u == null || form < 0 || form >= u.forms.length) {
+                continue;
+            }
+            Level lv = u.getPrefLvs(); // BCU's default levels (and all talents), used where none is given
+            if (p.length > 2 && !p[2].isEmpty()) {
+                lv.setLevel(Math.max(1, Math.min(parse(p[2], lv.getLv()), u.max)));
+            }
+            if (p.length > 3 && !p[3].isEmpty()) {
+                lv.setPlusLevel(Math.max(0, Math.min(parse(p[3], lv.getPlusLv()), u.maxp)));
+            }
+            if (p.length > 4 && !p[4].isEmpty()) {
+                int[] max = lv.getTalents().clone(); // (at maximum)
+                int[] t = new int[max.length];
+                String[] ts = p[4].split("\\.");
+                for (int j = 0; j < t.length; j++) {
+                    t[j] = j < ts.length ? Math.max(0, Math.min(parse(ts[j], max[j]), max[j])) : max[j];
+                }
+                lv.setTalents(t);
+            }
+            if (p.length > 5 && !p[5].isEmpty() && !u.orbs.isEmpty()) {
+                String[] os = p[5].split("/", -1);
+                int[][] orbs = new int[u.orbs.size()][];
+                for (int j = 0; j < orbs.length; j++) {
+                    String[] o = j < os.length ? os[j].split("\\.") : new String[0];
+                    orbs[j] = o.length == 3 ? new int[] { parse(o[0], 0), parse(o[1], 0), parse(o[2], 0) } : new int[0];
+                }
+                lv.setOrbs(orbs);
+            }
+            lu.lu.setLv(u, lv);
+            int r = i / 5;
+            lu.lu.fs[r][used[r]++] = u.forms[form];
+            placed++;
+        }
+        lu.lu.renew();
+        return placed;
+    }
+
+    /** The combos a lineup's front row makes: [[combo id, name, type, level], ...]. */
+    public static String combos(String lineup) {
+        BasisLU lu = new BasisLU();
+        fill(lu, lineup);
+        StringBuilder sb = new StringBuilder("[");
+        boolean first = true;
+        for (common.util.unit.Combo c : lu.lu.coms) {
+            sb.append(first ? "" : ",").append('[').append(c.id.id).append(',').append(q(c.getName()))
+                    .append(',').append(c.type).append(',').append(c.lv).append(']');
+            first = false;
+        }
+        return sb.append(']').toString();
     }
 
     /** Number of a base-game music file (bcu-assets/music/NNN.ogg), or -1. */
@@ -216,7 +267,27 @@ public final class BattleSession {
                 }
                 sb.append(i == 0 ? "" : ",").append(q(name == null ? "" : name));
             }
-            sb.append("],\"i\":[");
+            sb.append("]");
+            // talents (of the form with the most, as BCU's default levels): [talent type, max level, super talent 0/1]
+            common.battle.data.PCoin pc = null;
+            for (Form f : u.forms) {
+                common.battle.data.PCoin c = f.du.getPCoin();
+                if (c != null && (pc == null || c.max.length > pc.max.length)) {
+                    pc = c;
+                }
+            }
+            if (pc != null) {
+                sb.append(",\"t\":[");
+                for (int i = 0; i < pc.max.length; i++) {
+                    int[] inf = pc.info.get(i);
+                    sb.append(i == 0 ? "" : ",").append('[').append(inf[0]).append(',').append(pc.max[i]).append(',').append(inf[13] == 1 ? 1 : 0).append(']');
+                }
+                sb.append(']');
+            }
+            if (!u.orbs.isEmpty()) {
+                sb.append(",\"o\":").append(u.orbs.size());
+            }
+            sb.append(",\"i\":[");
             for (int i = 0; i < u.forms.length; i++) {
                 sb.append(i == 0 ? "" : ",").append(q(iconPath(u.forms[i])));
             }

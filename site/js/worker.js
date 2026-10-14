@@ -16,7 +16,7 @@ const EXTRA_URL = "https://raw.githubusercontent.com/battlecatsultimate/BCU_Andr
 const EXTRA_FILES = ["proc.json", "proc_kr.json", "proc_jp.json", "proc_es.json", "proc_zh.json", "animation_type.json"];
 // Stage, cat and enemy names (English, Korean, and Japanese as the fallback BCU uses), from bcu-assets/lang.
 const NAMES_URL = "https://raw.githubusercontent.com/battlecatsultimate/bcu-assets/master/lang/";
-const NAME_FILES = ["en", "kr", "jp"].flatMap((l) => ["StageName", "UnitName", "EnemyName"].map((f) => `${l}-${f}.txt`));
+const NAME_FILES = ["en", "kr", "jp"].flatMap((l) => ["StageName", "UnitName", "EnemyName", "ComboName"].map((f) => `${l}-${f}.txt`));
 const CACHE = "bcu-assets-v1";       // saved pack ranges
 const EXTRA_CACHE = "bcu-extra-v1";  // saved small files (ability texts, name lists)
 const SNAP_CACHE = "bcu-startup-v1"; // start-up data, decrypted, in one piece (faster return visits)
@@ -463,6 +463,8 @@ self.bcuCanvas = {
   },
 };
 let canvas = null;   // OffscreenCanvas from the page
+let gameLoaded = false;
+let setupJson = "";  // battle setup from the page (treasures, castle parts, items; see bcuweb.Setup)
 let redrawTimer = 0;
 let speed = 0;       // BCU speed setting, for the speed icon
 
@@ -515,6 +517,9 @@ self.onmessage = async (ev) => {
       await new Promise((ok) => { javaReady = ok; main([]); }); // wires the core and defines bcuLoad & co.
       const info = JSON.parse(bcuLoad(args.lang));
       if (canvas) bcuAttachCanvas(canvas);
+      gameLoaded = true;
+      if (setupJson) bcuSetup(setupJson);
+      post("setupInfo", JSON.parse(bcuSetupInfo("")));
       post("loaded", { ...info, stats, onDemand: onDemandLog.slice(0, 5000), downloadMs: Math.round(tDownload), totalMs: Math.round(performance.now() - t0) });
       post("storage", storageInfo());
       if (!snap && self.caches) saveSnapshot(startup); // (in the background)
@@ -560,6 +565,11 @@ self.onmessage = async (ev) => {
       post("frame", res);
     } else if (cmd === "input") {
       if (self.bcuInput) { bcuInput(args.cmd); draw(); }
+    } else if (cmd === "setup") {
+      setupJson = args.json; // (applied once the game is loaded, if it isn't yet)
+      if (gameLoaded) { bcuSetup(setupJson); post("setupDone", ""); }
+    } else if (cmd === "combos") {
+      if (gameLoaded) post("combos", JSON.parse(bcuCombos(args.lineup)));
     } else if (cmd === "units") {
       post("units", JSON.parse(bcuUnits("")));
     } else if (cmd === "setStar") {

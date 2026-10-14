@@ -49,6 +49,17 @@ talent and treasure handling as battles). Ability descriptions come from the cor
 `proc.json` texts, English or Korean); trait and simple-ability names (from BCU Android's strings) are in
 `site/js/i18n.js`. The page side is `site/js/info.js`.
 
+### Battle setup
+
+`bcuweb.Setup` takes the page's treasures and power-ups, cat base parts (cannon, style, foundation and their
+levels) and battle items (Rich Cat, Sniper the Cat: the two BCU has) as JSON and puts them into BCU's own
+`Treasure` (so battles and the info pages use them) and the battle's castle and item settings. Lineup slots carry
+talent levels and orbs (`BattleSession.start`); super talents count only from level 60, as in the game. Each lineup
+row is packed to the left before a battle (BCU's combos and controls expect no gaps). Combos come from BCU
+(`LineUp.coms`), with names from bcu-assets' `xx-ComboName.txt`. The page keeps the setup and saved lineups in the
+browser (`site/js/setup.js`). Korean names for talents, orbs, combo effects, castle parts and items are the Korean
+game's own texts.
+
 ### Sound
 
 BCU's music and sound effects are plain `.ogg` files in bcu-assets' `music/` folder (`tools/build_index.py`
@@ -91,10 +102,11 @@ Then rebuild. If a patch in `patches/` no longer applies, the build stops and sa
 
 ## Roadmap
 
+Done: M0–M6 (engine, graphics, battles, offline, sound, info pages), M8 (battle setup: treasures, power-ups,
+talents, orbs, cat base parts, items, combos, saved lineups, crowns).
+
 Next steps, in order (M7, custom packs, comes last):
 
-- **M8 Battle setup:** treasures and base upgrades, talents, orbs, cannon and castle parts, battle items,
-  combo display, saved lineups (crowns are done).
 - **M9 Battle extras:** more speeds, results screen, statistics, scoring.
 - **M10 Replays.**
 - **M11 Info extras:** filters, stage search, compare, descriptions, combo list.
@@ -106,7 +118,14 @@ Next steps, in order (M7, custom packs, comes last):
 ### Korean data
 
 The site uses the Korean game's versions of files that differ from BCU's Japanese ones (`site/data/kr`,
-made by `tools/kr_overlay.py`): stage files (so backgrounds match the Korean game) and the Empire of Cats
-enemy bases (`--castles`) and other enemy bases and backgrounds whose Korean picture differs, mostly
-Korean text instead of Japanese (`--images`; pictures laid out differently are left as BCU's), all from the
-Korean server packs in github.com/fieryhenry/BCData (`kr_server/`).
+made by `tools/kr_overlay.py`):
+- stage files (so backgrounds match the Korean game);
+- talents and orb slots (`SkillAcquisition.csv`, `equipmentslot.csv`, made with `--prefix ./org/data/`): the Korean
+  game has talents for some cats the Japanese data doesn't, and lacks a few;
+- the Empire of Cats enemy bases (`--castles`) and other enemy bases and backgrounds whose Korean picture differs,
+  mostly Korean text instead of Japanese (`--images`; pictures laid out differently are left as BCU's), from the
+  Korean server packs in github.com/fieryhenry/BCData (`kr_server/`).
+
+The data files are from the Korean 15.6.0 `DataLocal` at git.battlecatsmodding.org/fieryhenry/BCData (commit
+2a49665d). Compared with BCU's, the Korean cat stats, max levels, combos, orbs and castle-part data match, apart from
+rows for cats (or forms) BCU doesn't have yet, so only the two files above are used.
